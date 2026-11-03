@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html class="h-full bg-slate-50" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Sri Sakthi Xerox - Shop Management &amp; Billing System</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  
+  <!-- Offline Material Symbols & Custom App Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/material-symbols.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+
+  <!-- Local Tailwind Script (Zero External Network Required) -->
+  <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#eef2ff",
+              100: "#e0e7ff",
+              600: "#4f46e5",
+              700: "#4338ca",
+              800: "#3730a3"
+            }
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+            body: ["Inter", "system-ui", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-body flex min-h-screen selection:bg-indigo-600 selection:text-white">
+
+  <!-- ==========================================
+       1. PERSISTENT SIDEBAR NAVIGATION
+       ========================================== -->
+  <aside class="fixed top-0 left-0 h-screen w-64 z-30 border-r border-slate-200 bg-white flex flex-col justify-between p-4 select-none">
+    <div>
+      <!-- Brand Logo / Shop Identification -->
+      <div id="sidebar-shop-name" class="flex items-center justify-center px-1 py-3 mb-6">
+        <img src="{{ url_for('static', filename='img/sri_sakthi_logo.png') }}" alt="Sri Sakthi Xerox" class="h-28 w-auto max-w-full object-contain drop-shadow-xs select-none" />
+      </div>
+
+      <!-- PRIMARY NAVIGATION ITEMS -->
+      <nav class="space-y-1.5" id="nav-container">
+        <!-- 1. Income & Billing -->
+        <button id="nav-income" onclick="showPage('income')" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-headline text-[13.5px] font-semibold transition-all duration-150 bg-indigo-50 text-indigo-700 shadow-xs">
+          <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+          <span>Income &amp; Billing</span>
+        </button>
+
+        <!-- 2. Spending Details -->
+        <button id="nav-spending" onclick="showPage('spending')" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-headline text-[13.5px] font-medium transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+          <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+          <span>Spending Details</span>
+        </button>
+
+        <!-- 3. Income Analysis -->
+        <button id="nav-analysis" onclick="showPage('analysis')" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-headline text-[13.5px] font-medium transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+          <span class="material-symbols-outlined text-[20px]">bar_chart</span>
+          <span>Income Analysis</span>
+        </button>
+
+        <!-- 4. Products & Settings -->
+        <button id="nav-settings" onclick="showPage('settings')" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-headline text-[13.5px] font-medium transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+          <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+          <span>Products &amp; Settings</span>
+        </button>
+
+        <!-- 5. Recycle Bin -->
+        <button id="nav-recycle" onclick="showPage('recycle')" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-headline text-[13.5px] font-medium transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+            <span>Recycle Bin</span>
+          </div>
+          <span id="nav-recycle-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">0</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Bottom Sidebar Controls -->
+    <div class="space-y-4 pt-4 border-t border-slate-100">
+      <div class="space-y-1">
+        <button onclick="showPage('settings')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-body text-[12px] font-medium transition-colors">
+          <span class="material-symbols-outlined text-slate-400 text-[18px]">settings</span>
+          <span>Settings &amp; Rates</span>
+        </button>
+        <div class="flex items-center justify-between px-3 py-2 text-slate-600 font-body text-[12px]">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-[18px]">dns</span>
+            <span>System Status</span>
+          </div>
+          <span class="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Local SQLite
+          </span>
+        </div>
+      </div>
+
+      <!-- Shop Terminal Badge / Version -->
+      <div class="p-3 bg-slate-50 rounded-xl flex items-center gap-3 border border-slate-100">
+        <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center font-bold text-indigo-700 font-headline text-[12px]">
+          T1
+        </div>
+        <div class="overflow-hidden flex-1">
+          <p class="text-[12px] font-headline font-semibold text-slate-900 truncate">Admin Terminal #04</p>
+          <p class="text-[10px] font-mono text-slate-500 truncate">v2.4.0 • PrimeLink C9070</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==========================================
+       MAIN CONTENT CONTAINER
+       ========================================== -->
+  <div class="flex-1 flex flex-col pl-64 min-w-0 min-h-screen">
+    
+    <!-- PERSISTENT TOP HEADER -->
+    <header class="sticky top-0 w-full z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 id="header-title" class="text-[22px] font-headline font-bold text-slate-900 tracking-tight">Income &amp; Billing</h1>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-headline font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> Counter 1 Active
+          </span>
+        </div>
+        <p id="header-subtitle" class="text-[12px] font-body text-slate-500 mt-0.5">Record transactions, manage customer payments, and generate bills.</p>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Dynamic Contextual Action Buttons in Header -->
+        <div id="header-context-actions" class="flex items-center gap-2">
+          <button onclick="openAddIncome()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-700 text-white font-headline text-[13px] font-semibold hover:bg-indigo-800 transition-all shadow-sm active:scale-[0.98]">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            <span>Add Income</span>
+          </button>
+          <button onclick="openModal('modal-create-bill')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 font-headline text-[13px] font-semibold hover:bg-indigo-100 transition-all active:scale-[0.98]">
+            <span class="material-symbols-outlined text-[18px]">receipt</span>
+            <span>Generate Bill</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN SWITCHABLE VIEW CONTAINER -->
+    <main class="flex-1 px-8 py-8 w-full max-w-7xl mx-auto space-y-6">
+
+      <!-- =================================================================
+           PAGE 1: INCOME & BILLING
+           ================================================================= -->
+      <section id="page-income" class="space-y-6">
+        
+        <!-- Today's Income Summary Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden flex items-center justify-between">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-emerald-500"></div>
+            <div>
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-semibold">Today's Total Income</span>
+              <div class="text-[28px] font-headline font-extrabold text-slate-900 mt-1" id="today-income-val">₹0.00</div>
+              <span id="today-income-pct" class="text-[11px] font-mono text-emerald-600 font-semibold flex items-center gap-0.5 mt-0.5">
+                <span class="material-symbols-outlined text-[14px]">arrow_upward</span> +0% vs yesterday
+              </span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[26px]">payments</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden flex items-center justify-between">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-indigo-600"></div>
+            <div>
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-semibold">Transactions Today</span>
+              <div class="text-[28px] font-headline font-extrabold text-slate-900 mt-1" id="today-tx-count">0</div>
+              <span class="text-[11px] font-mono text-slate-500 mt-0.5" id="today-pm-summary">0 Cash</span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[26px]">point_of_sale</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden flex items-center justify-between">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-blue-600"></div>
+            <div>
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-semibold">Bills Generated Today</span>
+              <div class="text-[28px] font-headline font-extrabold text-slate-900 mt-1" id="today-bills-count">0</div>
+              <span class="text-[11px] font-mono text-blue-700 font-medium mt-0.5">100% Invoiced</span>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[26px]">receipt_long</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden flex items-center justify-between">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-amber-500"></div>
+            <div>
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-semibold">Total Unpaid Bills</span>
+              <div class="text-[28px] font-headline font-extrabold text-slate-900 mt-1" id="unpaid-bills-val">₹0.00</div>
+              <div id="unpaid-bills-count" class="text-[11px] font-headline text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span><span>0 unpaid bills</span>
+              </div>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[26px]">pending_actions</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Redesigned Filter Toolbar for Income -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex flex-wrap items-center gap-2 relative">
+              <!-- Search Input -->
+              <div class="relative min-w-[220px]">
+                <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="income-search" placeholder="Search customer, bill #, item..." onkeydown="if(event.key==='Enter') applyIncomeFilters()" class="w-full h-9 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-body text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors">
+              </div>
+
+              <!-- Time Trigger Popover Toggle with Date Range & Time Sorting -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-income-time')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
+                  <span id="income-time-btn-label">Time Period</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-income-time" class="hidden absolute top-11 left-0 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-30 space-y-3">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Time &amp; Date Filter</span>
+                    <button type="button" onclick="clearIncomeTimeInputs()" class="text-[11px] text-slate-400 hover:text-rose-600">Clear</button>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block mb-1">Quick Presets</label>
+                    <div class="grid grid-cols-3 gap-1 text-[11px] font-headline mb-2.5">
+                      <button type="button" onclick="setIncomeDatePreset('today')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">Today</button>
+                      <button type="button" onclick="setIncomeDatePreset('week')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">7 Days</button>
+                      <button type="button" onclick="setIncomeDatePreset('month')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">Month</button>
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-[10px] text-slate-500 font-medium">Start Date</label>
+                      <input type="date" id="filter-inc-start-date" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                      <label class="text-[10px] text-slate-500 font-medium">End Date</label>
+                      <input type="date" id="filter-inc-end-date" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end items-center pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-income-time')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Amount Trigger Popover Toggle with Range -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-income-amount')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">currency_rupee</span>
+                  <span id="income-amt-btn-label">Amount Range</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-income-amount" class="absolute top-11 left-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-30 space-y-3 hidden">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Amount Filter (₹)</span>
+                    <button type="button" onclick="clearIncomeAmountInputs()" class="text-[11px] text-slate-400 hover:text-rose-600">Clear</button>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block mb-1">Quick Ranges</label>
+                    <div class="grid grid-cols-3 gap-1 text-[11px] font-headline mb-2.5">
+                      <button type="button" onclick="setIncomeAmountRange(0, 100)" class="px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 truncate">&lt; ₹100</button>
+                      <button type="button" onclick="setIncomeAmountRange(100, 500)" class="px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 truncate">₹100-500</button>
+                      <button type="button" onclick="setIncomeAmountRange(500, '')" class="px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 truncate">₹500+</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="text-[10px] text-slate-500 font-medium block mb-0.5">Min ₹</label>
+                        <input type="number" id="filter-inc-min-amt" placeholder="0" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                      </div>
+                      <div>
+                        <label class="text-[10px] text-slate-500 font-medium block mb-0.5">Max ₹</label>
+                        <input type="number" id="filter-inc-max-amt" placeholder="No limit" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end items-center pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-income-amount')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cash / Payment Method Trigger Popover -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-income-pay')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600">payments</span>
+                  <span id="income-pay-btn-label">Payment: All</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-income-pay" class="absolute top-11 left-0 w-60 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-30 space-y-3 hidden">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Payment Method</span>
+                    <button type="button" onclick="selectAllIncomePaymentModes(true)" class="text-[11px] text-indigo-600 hover:underline">Select All</button>
+                  </div>
+                  <div class="space-y-1.5 text-[12px]">
+                    <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50">
+                      <input type="checkbox" id="filter-inc-pm-cash" value="Cash" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span class="material-symbols-outlined text-[16px] text-emerald-600">payments</span> Cash
+                      </span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50">
+                      <input type="checkbox" id="filter-inc-pm-upi" value="UPI" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span class="material-symbols-outlined text-[16px] text-blue-600">qr_code_2</span> UPI
+                      </span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50">
+                      <input type="checkbox" id="filter-inc-pm-card" value="Card" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span class="material-symbols-outlined text-[16px] text-purple-600">credit_card</span> Card
+                      </span>
+                    </label>
+                  </div>
+
+                  <div class="flex justify-end items-center pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-income-pay')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dedicated Payment Status Trigger Popover -->
+              <div class="relative">
+                <button type="button" id="income-status-btn" onclick="toggleDropdown('popover-income-status')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span id="income-status-icon" class="material-symbols-outlined text-[16px] text-slate-400">check_circle</span>
+                  <span id="income-status-btn-label">Status: All</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-income-status" class="absolute top-11 left-0 w-52 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-30 space-y-2 hidden">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Payment Status</span>
+                    <button type="button" onclick="setIncomeStatusFilter('')" class="text-[11px] text-slate-400 hover:text-indigo-600">All</button>
+                  </div>
+                  <div class="space-y-1 text-[12px]">
+                    <label onclick="setIncomeStatusFilter('')" class="flex items-center justify-between p-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <div class="flex items-center gap-2">
+                        <input type="radio" name="filter-inc-status" value="" checked class="text-indigo-600 focus:ring-0">
+                        <span class="font-medium text-slate-700">All Records</span>
+                      </div>
+                    </label>
+                    <label onclick="setIncomeStatusFilter('Paid')" class="flex items-center justify-between p-2 rounded-xl cursor-pointer hover:bg-emerald-50/60 transition-colors">
+                      <div class="flex items-center gap-2">
+                        <input type="radio" name="filter-inc-status" value="Paid" class="text-emerald-600 focus:ring-0">
+                        <span class="font-semibold text-emerald-700 flex items-center gap-1.5">
+                          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Paid
+                        </span>
+                      </div>
+                      <span class="text-[10px] text-slate-400">Paid records</span>
+                    </label>
+                    <label onclick="setIncomeStatusFilter('Not Paid')" class="flex items-center justify-between p-2 rounded-xl cursor-pointer hover:bg-amber-50/60 transition-colors">
+                      <div class="flex items-center gap-2">
+                        <input type="radio" name="filter-inc-status" value="Not Paid" class="text-amber-600 focus:ring-0">
+                        <span class="font-semibold text-amber-700 flex items-center gap-1.5">
+                          <span class="w-2 h-2 rounded-full bg-amber-500"></span> Unpaid
+                        </span>
+                      </div>
+                      <span class="text-[10px] text-slate-400">Unpaid records</span>
+                    </label>
+                  </div>
+                  <div class="flex justify-end pt-2 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-income-status')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Income Type Trigger Dropdown (Exactly 3 types) -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-income-type')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">category</span>
+                  <span id="income-cat-btn-label">Categories</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-income-type" class="absolute top-11 left-0 w-52 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-30 space-y-2 hidden">
+                  <span class="text-[11px] font-headline font-bold text-slate-800 block">Income Classification</span>
+                  <div class="space-y-1.5 text-[12px]">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" id="filter-inc-cat-xerox" checked value="Xerox Services" class="rounded text-indigo-600 focus:ring-0">
+                      <span>Xerox Services</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" id="filter-inc-cat-prod" checked value="Product Sales" class="rounded text-emerald-600 focus:ring-0">
+                      <span>Product Sales</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" id="filter-inc-cat-combo" checked value="Combo Services" class="rounded text-amber-600 focus:ring-0">
+                      <span>Combo Services</span>
+                    </label>
+                  </div>
+                  <div class="flex justify-end pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-income-type')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Unified Apply and Reset Filter Action Buttons -->
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="applyIncomeFilters()" class="h-9 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-headline text-[12px] font-semibold rounded-xl flex items-center gap-1.5 shadow-sm hover:shadow active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[17px]">filter_alt</span>
+                <span>Apply Filter</span>
+              </button>
+              <button type="button" onclick="resetIncomeFilters()" class="h-9 px-3 text-[12px] font-headline font-medium text-slate-600 hover:text-indigo-700 hover:bg-slate-50 rounded-xl flex items-center gap-1 transition-colors border border-slate-200">
+                <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>Reset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Income Records Table Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-headline font-bold uppercase tracking-wider text-slate-500">
+                  <th class="py-3 px-4">ID</th>
+                  <th class="py-3 px-4 cursor-pointer hover:text-indigo-600 transition-colors select-none" onclick="toggleIncomeSort('time')" title="Click to toggle Time sorting (Newest / Oldest)">
+                    <div class="inline-flex items-center gap-1">
+                      <span>Date &amp; Time</span>
+                      <span id="col-sort-inc-time" class="material-symbols-outlined text-[15px] text-indigo-600">arrow_downward</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4">Bill #</th>
+                  <th class="py-3 px-4">Income Type &amp; Item</th>
+                  <th class="py-3 px-4 text-right cursor-pointer hover:text-indigo-600 transition-colors select-none" onclick="toggleIncomeSort('amount')" title="Click to toggle Amount sorting (Highest / Lowest)">
+                    <div class="inline-flex items-center justify-end gap-1">
+                      <span>Amount</span>
+                      <span id="col-sort-inc-amt" class="material-symbols-outlined text-[15px] text-slate-300">unfold_more</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4">Payment Method</th>
+                  <th class="py-3 px-4">Payment Status</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="income-table-body" class="divide-y divide-slate-100 font-body">
+                <!-- Loaded dynamically from SQLite -->
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination Footer -->
+          <div id="income-pagination" class="px-6 py-3.5 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-[12px] text-slate-500">
+            <!-- Dynamic pagination -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- =================================================================
+           PAGE 2: SPENDING DETAILS
+           ================================================================= -->
+      <section id="page-spending" class="space-y-6 hidden">
+
+        <!-- Spending Summary Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Today's Spend -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-amber-500"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-semibold">Today's Total Spending</span>
+              <span class="material-symbols-outlined text-[20px] text-amber-500">calendar_view_day</span>
+            </div>
+            <div class="mt-4">
+              <div class="text-[28px] font-headline font-extrabold text-slate-900" id="spending-today-val">₹0.00</div>
+              <span class="text-[11px] font-mono text-slate-500 mt-1 block truncate" id="spending-today-desc">No expenses today</span>
+            </div>
+          </div>
+
+          <!-- This Month's Total Spending (Prominent Highlight) -->
+          <div class="bg-white rounded-2xl border-2 border-indigo-200 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between bg-gradient-to-br from-white to-indigo-50/20">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-indigo-700"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-indigo-700 font-bold">This Month's Spending</span>
+              <span class="material-symbols-outlined text-[22px] text-indigo-700">analytics</span>
+            </div>
+            <div class="mt-4">
+              <div class="text-[32px] font-headline font-extrabold text-indigo-700" id="spending-month-val">₹0.00</div>
+              <div class="flex items-center gap-1.5 mt-1">
+                <span id="spending-month-pct" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">-0%</span>
+                <span class="text-[11px] font-mono text-slate-500">vs last month</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expense Transactions Count -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-purple-600"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-semibold">Expense Transactions</span>
+              <span class="material-symbols-outlined text-[20px] text-purple-600">receipt</span>
+            </div>
+            <div class="mt-4">
+              <div class="text-[28px] font-headline font-extrabold text-slate-900" id="spending-tx-count">0</div>
+              <span class="text-[11px] font-mono text-emerald-600 font-medium mt-1 block">All receipts audited</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Redesigned Filter Toolbar for Spending -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex flex-wrap items-center gap-2 relative">
+              <!-- Search bar -->
+              <div class="relative min-w-[220px]">
+                <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="spending-search" placeholder="Search payee, item, invoice #..." onkeydown="if(event.key==='Enter') applySpendingFilters()" class="w-full h-9 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-body text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors">
+              </div>
+
+              <!-- Time Period Trigger Popover Toggle with Date Range & Time Sorting -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-spend-time')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
+                  <span id="spending-time-btn-label">Time Period</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-spend-time" class="hidden absolute top-11 left-0 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-30 space-y-3">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Time &amp; Date Filter</span>
+                    <button type="button" onclick="clearSpendingTimeInputs()" class="text-[11px] text-slate-400 hover:text-rose-600">Clear</button>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block mb-1">Quick Presets</label>
+                    <div class="grid grid-cols-3 gap-1 text-[11px] font-headline mb-2.5">
+                      <button type="button" onclick="setSpendingDatePreset('today')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">Today</button>
+                      <button type="button" onclick="setSpendingDatePreset('week')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">7 Days</button>
+                      <button type="button" onclick="setSpendingDatePreset('month')" class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">Month</button>
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="text-[10px] text-slate-500 font-medium">Start Date</label>
+                      <input type="date" id="filter-exp-start-date" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                      <label class="text-[10px] text-slate-500 font-medium">End Date</label>
+                      <input type="date" id="filter-exp-end-date" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end items-center pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-spend-time')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Amount Range Popover Toggle with Range & Amount Sorting -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-spend-amt')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">payments</span>
+                  <span id="spending-amt-btn-label">Amount Range</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-spend-amt" class="hidden absolute top-11 left-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-30 space-y-3">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Amount Filter (₹)</span>
+                    <button type="button" onclick="clearSpendingAmountInputs()" class="text-[11px] text-slate-400 hover:text-rose-600">Clear</button>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block mb-1">Quick Ranges</label>
+                    <div class="grid grid-cols-3 gap-1 text-[11px] font-headline mb-2.5">
+                      <button type="button" onclick="setSpendingAmountRange(0, 500)" class="px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 truncate">&lt; ₹500</button>
+                      <button type="button" onclick="setSpendingAmountRange(500, 2000)" class="px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 truncate">₹500-2k</button>
+                      <button type="button" onclick="setSpendingAmountRange(2000, '')" class="px-1.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 truncate">₹2,000+</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="text-[10px] text-slate-500 font-medium block mb-0.5">Min ₹</label>
+                        <input type="number" id="filter-exp-min-amt" placeholder="0" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                      </div>
+                      <div>
+                        <label class="text-[10px] text-slate-500 font-medium block mb-0.5">Max ₹</label>
+                        <input type="number" id="filter-exp-max-amt" placeholder="No limit" class="w-full h-8 px-2 text-[11px] rounded-lg border border-slate-200">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end items-center pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-spend-amt')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cash / Payment Method Trigger Popover for Spending -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-spend-pay')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600">payments</span>
+                  <span id="spending-pay-btn-label">Payment: All</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-spend-pay" class="absolute top-11 left-0 w-60 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-30 space-y-3 hidden">
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-[12px] font-headline font-bold text-slate-800">Payment Modes (Cash)</span>
+                    <button type="button" onclick="selectAllSpendingPaymentModes(true)" class="text-[11px] text-indigo-600 hover:underline">Select All</button>
+                  </div>
+                  <div class="space-y-1.5 text-[12px]">
+                    <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50">
+                      <input type="checkbox" id="filter-exp-pm-cash" value="Cash" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span class="material-symbols-outlined text-[16px] text-emerald-600">payments</span> Cash
+                      </span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50">
+                      <input type="checkbox" id="filter-exp-pm-upi" value="UPI" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span class="material-symbols-outlined text-[16px] text-blue-600">qr_code_2</span> UPI
+                      </span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50">
+                      <input type="checkbox" id="filter-exp-pm-card" value="Card" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                        <span class="material-symbols-outlined text-[16px] text-purple-600">credit_card</span> Card
+                      </span>
+                    </label>
+                  </div>
+                  <div class="flex justify-end items-center pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-spend-pay')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Spending Category Popover Trigger -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-spend-cat')" class="h-9 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">tune</span>
+                  <span id="spending-cat-btn-label">Spending Verticals</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-spend-cat" class="hidden absolute top-11 left-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-30 space-y-2">
+                  <span class="text-[11px] font-headline font-bold text-slate-800 block">Spending Verticals</span>
+                  <div class="space-y-1.5 text-[12px]">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Stationery Items" class="rounded text-indigo-600"> Stationery Items</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Paper" class="rounded text-indigo-600"> Paper</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Photo Sheets" class="rounded text-indigo-600"> Photo Sheets</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Spirals" class="rounded text-indigo-600"> Spirals</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Service Charges" class="rounded text-indigo-600"> Service Charges</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Toner / Ink" class="rounded text-indigo-600"> Toner / Ink</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="EB Bill" class="rounded text-indigo-600"> EB Bill</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked value="Shop Rent" class="rounded text-indigo-600"> Shop Rent</label>
+                  </div>
+                  <div class="flex justify-end pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-spend-cat')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Unified Apply and Reset Filter Action Buttons for Spending -->
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="applySpendingFilters()" class="h-9 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-headline text-[12px] font-semibold rounded-xl flex items-center gap-1.5 shadow-sm hover:shadow active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[17px]">filter_alt</span>
+                <span>Apply Filter</span>
+              </button>
+              <button type="button" onclick="resetSpendingFilters()" class="h-9 px-3 text-[12px] font-headline font-medium text-slate-600 hover:text-indigo-700 hover:bg-slate-50 rounded-xl flex items-center gap-1 transition-colors border border-slate-200">
+                <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>Reset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spending Records Table Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-headline font-bold uppercase tracking-wider text-slate-500">
+                  <th class="py-3 px-4">ID</th>
+                  <th class="py-3 px-4 cursor-pointer hover:text-indigo-600 transition-colors select-none" onclick="toggleSpendingSort('time')" title="Click to toggle Time sorting (Newest / Oldest)">
+                    <div class="inline-flex items-center gap-1">
+                      <span>Date &amp; Time</span>
+                      <span id="col-sort-spend-time" class="material-symbols-outlined text-[15px] text-indigo-600">arrow_downward</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 text-right cursor-pointer hover:text-indigo-600 transition-colors select-none" onclick="toggleSpendingSort('amount')" title="Click to toggle Amount sorting (Highest / Lowest)">
+                    <div class="inline-flex items-center justify-end gap-1 w-full">
+                      <span>Amount (₹)</span>
+                      <span id="col-sort-spend-amt" class="material-symbols-outlined text-[15px] text-slate-300">unfold_more</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4">Expense Category &amp; Payee</th>
+                  <th class="py-3 px-4">Payment</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="spending-table-body" class="divide-y divide-slate-100 font-body">
+                <!-- Loaded dynamically from SQLite -->
+              </tbody>
+            </table>
+          </div>
+          <!-- Table Footer -->
+          <div id="spending-pagination" class="px-6 py-3.5 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-[12px] text-slate-500">
+            <!-- Dynamic pagination -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- =================================================================
+           PAGE 3: INCOME ANALYSIS DASHBOARD
+           ================================================================= -->
+      <section id="page-analysis" class="space-y-6 hidden">
+
+        <!-- Top Analysis Controls Toolbar -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            
+            <!-- Modern Starting Date & Ending Date Filter Group -->
+            <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-slate-50/90 p-1.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+              
+              <!-- Starting Date Field -->
+              <div onclick="const el=document.getElementById('analysis-start-date'); if(event.target!==el){try{el.showPicker();}catch(e){el.focus();}}" class="flex items-center gap-2.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 transition-all cursor-pointer">
+                <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                </div>
+                <div class="flex flex-col">
+                  <label for="analysis-start-date" class="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-wider cursor-pointer leading-tight select-none">Starting Date</label>
+                  <input type="date" id="analysis-start-date" class="bg-transparent border-none text-[12px] font-headline font-semibold text-slate-800 p-0 focus:outline-none focus:ring-0 cursor-pointer">
+                </div>
+              </div>
+
+              <!-- Flow Separator -->
+              <div class="hidden sm:flex items-center justify-center w-6 h-6 rounded-full bg-slate-200/70 text-slate-400 shrink-0">
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </div>
+
+              <!-- Ending Date Field -->
+              <div onclick="const el=document.getElementById('analysis-end-date'); if(event.target!==el){try{el.showPicker();}catch(e){el.focus();}}" class="flex items-center gap-2.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:border-indigo-400 focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 transition-all cursor-pointer">
+                <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <span class="material-symbols-outlined text-[16px]">event</span>
+                </div>
+                <div class="flex flex-col">
+                  <label for="analysis-end-date" class="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-wider cursor-pointer leading-tight select-none">Ending Date</label>
+                  <input type="date" id="analysis-end-date" class="bg-transparent border-none text-[12px] font-headline font-semibold text-slate-800 p-0 focus:outline-none focus:ring-0 cursor-pointer">
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Date Filter Indicator Badge -->
+            <div id="analysis-active-period-badge" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-600 text-[11px] font-headline font-medium">
+              <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+              <span id="analysis-period-text">Current Period</span>
+            </div>
+          </div>
+
+          <!-- Apply & Reset Actions for Analysis -->
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="applyAnalysisFilters()" class="h-9 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-[12px] font-headline font-semibold flex items-center gap-1.5 shadow-sm hover:shadow active:scale-[0.98] transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">filter_alt</span>
+              <span>Apply Filter</span>
+            </button>
+            <button type="button" onclick="resetAnalysisFilters()" title="Reset Filters" class="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl text-[12px] font-headline font-medium flex items-center gap-1 transition-colors cursor-pointer shadow-2xs">
+              <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- FOUR TOP KPI CARDS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Card 1: Total Profit -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all duration-200 group">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-bold">Total Profit</span>
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/60 group-hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined text-[20px]">trending_up</span>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-[28px] sm:text-[30px] font-headline font-extrabold text-slate-900 tracking-tight" id="kpi-profit">₹0</div>
+              <div class="flex items-center gap-1.5 mt-2">
+                <span id="kpi-profit-pct" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">+0%</span>
+                <span class="text-[11px] font-mono text-slate-500">vs prior period</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Total Spend -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all duration-200 group">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-rose-500"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-bold">Total Spend</span>
+              <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100/60 group-hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-[28px] sm:text-[30px] font-headline font-extrabold text-slate-900 tracking-tight" id="kpi-spend">₹0</div>
+              <div class="flex items-center gap-1.5 mt-2">
+                <span id="kpi-spend-pct" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">-0%</span>
+                <span class="text-[11px] font-mono text-slate-500">expenses logged</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Total Revenue -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all duration-200 group">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-600 to-blue-600"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-bold">Total Revenue</span>
+              <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100/60 group-hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-[28px] sm:text-[30px] font-headline font-extrabold text-slate-900 tracking-tight" id="kpi-rev">₹0</div>
+              <div class="flex items-center gap-1.5 mt-2">
+                <span id="kpi-rev-pct" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">+0%</span>
+                <span class="text-[11px] font-mono text-slate-500">run-rate target</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Total People -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all duration-200 group">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-600 to-fuchsia-600"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-headline uppercase tracking-wider text-slate-500 font-bold">Total People</span>
+              <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-100/60 group-hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined text-[20px]">group</span>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="text-[28px] sm:text-[30px] font-headline font-extrabold text-slate-900 tracking-tight" id="kpi-customers">0</div>
+              <div class="flex items-center gap-1.5 mt-2">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Unique</span>
+                <span class="text-[11px] font-mono text-slate-500">retail customers</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN ANALYTICS SECTION: CHARTS DASHBOARD (Trend Hero Chart + Symmetrical Breakdown Grid) -->
+        <div class="space-y-6">
+          
+          <!-- ROW 1: Revenue, Spending & Profit Multi-Line Spline Chart (Full-Width Hero Card) -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+            <div>
+              <!-- Header: Title on Left, Interval Dropdown on Right -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                  <h3 class="text-[16px] font-headline font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                    <span>Revenue, Spending &amp; Profit Trend</span>
+                  </h3>
+                  <p class="text-[12px] font-body text-slate-500 mt-0.5">Comparative fiscal telemetry &amp; volume dynamics</p>
+                </div>
+                <!-- Time Interval Dropdown (Daily, Weekly, Monthly) -->
+                <div class="relative inline-flex items-center">
+                  <select id="trajectory-mode-select" onchange="onTrajectoryModeChange(this.value)" class="appearance-none bg-slate-50 hover:bg-slate-100/80 text-slate-800 text-[12px] font-headline font-semibold py-1.5 pl-3.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer transition-colors shadow-2xs">
+                    <option value="daily">Daily</option>
+                    <option value="weekly" selected>Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
+                </div>
+              </div>
+
+              <!-- Selectable Metric Pills (Total Profit, Total Spending, Total Revenue, Total People) -->
+              <div class="flex flex-wrap items-center gap-2 py-3 text-[11px] font-headline" id="chart-metrics-container">
+                <!-- Total Profit -->
+                <button type="button" onclick="toggleChartMetric('profit')" id="pill-metric-profit" class="chart-metric-pill transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-semibold cursor-pointer select-none bg-emerald-50 text-emerald-800 border-emerald-200 shadow-2xs">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span>Total Profit</span>
+                  <span id="pill-val-profit" class="font-mono text-[10.5px] opacity-90">(₹0)</span>
+                </button>
+
+                <!-- Total Spending -->
+                <button type="button" onclick="toggleChartMetric('spend')" id="pill-metric-spend" class="chart-metric-pill transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-semibold cursor-pointer select-none bg-rose-50 text-rose-800 border-rose-200 shadow-2xs">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span>
+                  <span>Total Spending</span>
+                  <span id="pill-val-spend" class="font-mono text-[10.5px] opacity-90">(₹0)</span>
+                </button>
+
+                <!-- Total Revenue -->
+                <button type="button" onclick="toggleChartMetric('revenue')" id="pill-metric-revenue" class="chart-metric-pill transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-semibold cursor-pointer select-none bg-blue-50 text-blue-800 border-blue-200 shadow-2xs">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+                  <span>Total Revenue</span>
+                  <span id="pill-val-revenue" class="font-mono text-[10.5px] opacity-90">(₹0)</span>
+                </button>
+
+                <!-- Total People -->
+                <button type="button" onclick="toggleChartMetric('people')" id="pill-metric-people" class="chart-metric-pill transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-semibold cursor-pointer select-none bg-purple-50 text-purple-800 border-purple-200 shadow-2xs">
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-500 shrink-0"></span>
+                  <span>Total People</span>
+                  <span id="pill-val-people" class="font-mono text-[10.5px] opacity-90">(0)</span>
+                </button>
+              </div>
+
+              <!-- SVG Multi-Line Chart Canvas with Glassmorphic Tooltip Container -->
+              <div class="relative w-full h-64 sm:h-72 pt-1" id="trajectory-canvas-wrap">
+                <svg id="trajectory-svg-canvas" class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 960 250">
+                  <!-- Rendered dynamically by Vanilla JS spline chart engine -->
+                </svg>
+                <!-- Floating Hover Tooltip -->
+                <div id="chart-hover-tooltip" class="absolute pointer-events-none hidden z-30 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl px-3.5 py-2.5 shadow-2xl text-[11px] font-headline text-white transform -translate-x-1/2 -translate-y-full transition-opacity duration-150">
+                  <!-- Populated dynamically on mousemove -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-mono text-slate-500 mt-2">
+              <span id="chart-peak-info">Peak: <strong>—</strong></span>
+              <button onclick="exportFiscalCSV()" class="text-indigo-600 font-semibold hover:text-indigo-700 hover:underline flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-[14px]">download</span> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- ROW 2: Balanced 2-Column Grid (Revenue by Product vs Spending Breakdown) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            
+            <!-- CHART B: Donut Chart "Revenue by Product" -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow duration-200 min-h-[420px]">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-[16px] font-headline font-bold text-slate-900">Revenue by Product</h3>
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <span class="material-symbols-outlined text-[18px]">pie_chart</span>
+                </div>
+              </div>
+
+              <!-- Donut Callout Visual (Reference Design Style) -->
+              <div class="relative w-full flex-1 flex items-center justify-center py-2 my-auto">
+                <svg id="donut-svg-ring" class="w-full h-auto max-h-[360px] overflow-visible" viewBox="0 0 580 340">
+                  <!-- Dynamic Callout SVG rendered via vanilla JS -->
+                </svg>
+              </div>
+            </div>
+
+            <!-- CHART C: Spending Breakdown (Pie / Donut Chart) -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow duration-200 min-h-[420px]">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-[16px] font-headline font-bold text-slate-900">Spending Breakdown</h3>
+                <div class="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+                  <span class="material-symbols-outlined text-[18px]">pie_chart</span>
+                </div>
+              </div>
+
+              <!-- Donut Callout Visual (Reference Design Style) -->
+              <div id="spending-pie-container" class="relative w-full flex-1 flex items-center justify-center py-2 my-auto">
+                <svg id="spending-pie-ring" class="w-full h-auto max-h-[360px] overflow-visible" viewBox="0 0 580 340">
+                  <!-- Dynamic Callout SVG rendered via vanilla JS -->
+                </svg>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- OPERATIONAL VELOCITY: 5 AVERAGE CARDS IN A SINGLE HORIZONTAL ROW -->
+        <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-[15px] font-headline font-bold text-slate-900">Operational Velocity</h3>
+              <p class="text-[11px] font-body text-slate-500">Average unit metrics and throughput telemetry</p>
+            </div>
+            <!-- Daily, Weekly, Monthly Period Selector -->
+            <div class="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 text-[11px] font-headline">
+              <button type="button" id="vel-period-daily" onclick="setVelocityPeriod('daily')" class="vel-period-btn px-3 py-1 rounded-lg transition-all text-white bg-slate-900 shadow-xs font-semibold cursor-pointer">Daily</button>
+              <button type="button" id="vel-period-weekly" onclick="setVelocityPeriod('weekly')" class="vel-period-btn px-3 py-1 rounded-lg transition-all text-slate-600 hover:text-slate-900 font-medium cursor-pointer">Weekly</button>
+              <button type="button" id="vel-period-monthly" onclick="setVelocityPeriod('monthly')" class="vel-period-btn px-3 py-1 rounded-lg transition-all text-slate-600 hover:text-slate-900 font-medium cursor-pointer">Monthly</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <!-- 1. Avg Customers -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-3.5">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold block">Avg Customers</span>
+              <div class="text-[20px] font-headline font-extrabold text-slate-900 mt-1" id="vel-avg-cust">0 <span class="text-[11px] font-normal text-slate-500">/ day</span></div>
+              <p class="text-[10px] font-mono text-emerald-600 mt-1 flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px]">trending_up</span> Footfall count
+              </p>
+            </div>
+
+            <!-- 2. Avg Revenue -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-3.5">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold block">Avg Revenue</span>
+              <div class="text-[20px] font-headline font-extrabold text-slate-900 mt-1" id="vel-avg-rev">₹0 <span class="text-[11px] font-normal text-slate-500">/ day</span></div>
+              <p class="text-[10px] font-mono text-emerald-600 mt-1 flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px]">trending_up</span> Sales run-rate
+              </p>
+            </div>
+
+            <!-- 3. Avg Spending -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-3.5">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold block">Avg Spending</span>
+              <div class="text-[20px] font-headline font-extrabold text-slate-900 mt-1" id="vel-avg-spend">₹0 <span class="text-[11px] font-normal text-slate-500">/ day</span></div>
+              <p class="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-0.5" id="vel-sub-spend">
+                <span class="material-symbols-outlined text-[12px]">check_circle</span> <span id="vel-sub-spend-text">Daily burn rate</span>
+              </p>
+            </div>
+
+            <!-- 4. Avg Profit -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-3.5">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold block">Avg Profit</span>
+              <div class="text-[20px] font-headline font-extrabold text-emerald-600 mt-1" id="vel-avg-profit">₹0 <span class="text-[11px] font-normal text-slate-500">/ day</span></div>
+              <p class="text-[10px] font-mono text-emerald-600 mt-1 flex items-center gap-0.5" id="vel-margin-pct">
+                <span class="material-symbols-outlined text-[12px]">arrow_upward</span> 0% margin
+              </p>
+            </div>
+
+            <!-- 5. Avg Spend / Customer -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-3.5">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold block">Avg Spend / Cust.</span>
+              <div class="text-[20px] font-headline font-extrabold text-slate-900 mt-1" id="vel-avg-cust-spend">₹0.00 <span class="text-[11px] font-normal text-slate-500">/ visit</span></div>
+              <p class="text-[10px] font-mono text-slate-500 mt-1">Total spend / unique</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- GITHUB-STYLE 52-WEEK PRODUCTION ACTIVITY LOG / HEATMAP -->
+        <section class="w-full bg-white text-slate-800 rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm select-none space-y-4">
+          <!-- Header with Year Selection Filter -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <span class="material-symbols-outlined text-[18px]">terminal</span>
+              </div>
+              <div>
+                <span class="text-[15px] font-headline font-bold text-slate-900">Spool Activity &amp; Print Ledger</span>
+              </div>
+            </div>
+
+            <!-- Year Selection Filter Toolbar -->
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[15px] text-indigo-500">calendar_month</span> Select Year:
+              </span>
+              <select id="spool-year-select" onchange="onSpoolYearChange(this.value)" class="bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-headline font-semibold text-[12px] h-8 px-3 rounded-xl border border-slate-200 cursor-pointer outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-colors shadow-2xs">
+                <option value="2026" class="bg-white text-slate-800" selected>2026</option>
+                <option value="2025" class="bg-white text-slate-800">2025</option>
+                <option value="2024" class="bg-white text-slate-800">2024</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Annual Telemetry KPI Metrics for Selected Year -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold">Total Activities</span>
+              <span id="spool-stat-total-jobs" class="text-[20px] font-headline font-extrabold text-slate-900 mt-1">0</span>
+              <span class="text-[10px] font-mono text-slate-400 mt-0.5">spooled print jobs</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold">Active Output Days</span>
+              <span id="spool-stat-active-days" class="text-[20px] font-headline font-extrabold text-emerald-600 mt-1">0</span>
+              <span class="text-[10px] font-mono text-slate-400 mt-0.5">days with activity</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold">Peak Single Day</span>
+              <span id="spool-stat-peak-day" class="text-[16px] font-headline font-bold text-indigo-600 mt-1 truncate">—</span>
+              <span id="spool-stat-peak-count" class="text-[10px] font-mono text-slate-400 mt-0.5">0 jobs recorded</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+              <span class="text-[10px] font-headline uppercase tracking-wider text-slate-500 font-bold">Busiest Period</span>
+              <span id="spool-stat-busiest-month" class="text-[16px] font-headline font-bold text-amber-600 mt-1 truncate">—</span>
+              <span class="text-[10px] font-mono text-slate-400 mt-0.5">highest monthly spool</span>
+            </div>
+          </div>
+
+          <!-- Heatmap Visual Grid -->
+          <div class="overflow-x-auto custom-scroll pt-2 pb-1">
+            <div class="w-fit min-w-[760px]">
+              <div class="flex gap-2 mb-1.5">
+                <div class="w-5 shrink-0"></div>
+                <div id="analysis-heatmap-months" class="flex gap-[3px] text-[10px] font-mono font-medium text-slate-500">
+                  <!-- Column-anchored month headers generated dynamically -->
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <div class="flex flex-col justify-between text-[9px] font-mono text-slate-400 py-0.5 select-none w-5 text-right shrink-0">
+                  <span>Mon</span><span>Wed</span><span>Fri</span>
+                </div>
+                <div class="flex gap-[3px]" id="analysis-heatmap-grid">
+                  <!-- 52/53 columns generated dynamically for the selected year -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Heatmap Legend -->
+          <div class="flex items-center justify-end pt-2 border-t border-slate-100 text-[11px] font-mono text-slate-500">
+            <div class="flex items-center gap-1.5">
+              <span>Less</span>
+              <div class="flex items-center gap-1">
+                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#ebedf0] border border-slate-200"></span>
+                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#9be9a8]"></span>
+                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#40c463]"></span>
+                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#30a14e]"></span>
+                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#216e39]"></span>
+              </div>
+              <span>More</span>
+            </div>
+          </div>
+        </section>
+
+      </section>
+
+      <!-- =================================================================
+           PAGE 4: PRODUCTS & SHOP SETTINGS
+           ================================================================= -->
+      <section id="page-settings" class="space-y-6 hidden">
+
+        <!-- Top Header Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700">
+              <span class="material-symbols-outlined text-[28px]">inventory_2</span>
+            </div>
+            <div>
+              <h2 class="text-[20px] font-headline font-bold text-slate-900 leading-tight">Product Catalog &amp; Shop Settings</h2>
+              <p class="text-[12px] text-slate-500 mt-0.5">Manage products and services (Product ID, Name, Price) for fast billing, plus receipt branding and default rates.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="catalog-count-badge" class="px-3 py-1 rounded-full text-[12px] font-headline font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              Loading products...
+            </span>
+          </div>
+        </div>
+
+        <!-- Section A: Product & Service Catalog Management -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-indigo-700 text-[20px]">add_box</span>
+              <h3 class="text-[15px] font-headline font-bold text-slate-900">Add New Product or Service</h3>
+            </div>
+            <span class="text-[11px] text-slate-500 font-body">Items added here will be immediately selectable when generating bills.</span>
+          </div>
+
+          <!-- Add Product Form -->
+          <form onsubmit="handleNewProductSubmit(event)" class="p-6 border-b border-slate-100 bg-white">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <!-- Product ID (Manual Input) -->
+              <div class="md:col-span-3">
+                <label class="text-[11px] font-headline font-bold text-slate-700 block mb-1">
+                  Product ID <span class="text-indigo-600">*</span>
+                </label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[16px]">tag</span>
+                  <input type="text" id="new-prod-code" placeholder="e.g. PRD-109, XER-A3" required class="w-full h-9 pl-8 pr-3 text-[12px] font-mono border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 focus:outline-none uppercase">
+                </div>
+                <span class="text-[10px] text-slate-400 block mt-0.5">Unique identifier entered manually</span>
+              </div>
+
+              <!-- Product Name -->
+              <div class="md:col-span-4">
+                <label class="text-[11px] font-headline font-bold text-slate-700 block mb-1">
+                  Product / Service Name <span class="text-indigo-600">*</span>
+                </label>
+                <input type="text" id="new-prod-name" placeholder="e.g. Glossy Photo Paper A4" required class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 focus:outline-none">
+                <span class="text-[10px] text-slate-400 block mt-0.5">Selectable dropdown name on billing</span>
+              </div>
+
+              <!-- Category -->
+              <div class="md:col-span-2">
+                <label class="text-[11px] font-headline font-bold text-slate-700 block mb-1">
+                  Category
+                </label>
+                <select id="new-prod-category" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 focus:outline-none">
+                  <option value="Xerox Services">Xerox Services</option>
+                  <option value="Product Sales">Product Sales</option>
+                </select>
+              </div>
+
+              <!-- Price (₹) -->
+              <div class="md:col-span-2">
+                <label class="text-[11px] font-headline font-bold text-slate-700 block mb-1">
+                  Price (₹) <span class="text-indigo-600">*</span>
+                </label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-[16px]">currency_rupee</span>
+                  <input type="number" id="new-prod-price" placeholder="10.00" min="0" step="0.25" required class="w-full h-9 pl-7 pr-3 text-[12px] font-mono border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 focus:outline-none font-bold">
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="md:col-span-1">
+                <button type="submit" class="w-full h-9 bg-indigo-700 hover:bg-indigo-800 text-white text-[12px] font-headline font-semibold rounded-xl flex items-center justify-center gap-1 shadow-sm active:scale-[0.98] transition-all">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                  <span>Save</span>
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Products Table & Filter Toolbar -->
+          <div class="p-4 bg-slate-50/50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="relative min-w-[260px]">
+                <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+                <input type="text" id="catalog-search" placeholder="Search catalog by ID or product name..." onkeydown="if(event.key === 'Enter'){ event.preventDefault(); applyCatalogFilters(); }" class="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-xl text-[12px] font-body text-slate-900 focus:outline-none focus:border-indigo-600">
+              </div>
+
+              <!-- Category Filter Trigger Popover for Catalog -->
+              <div class="relative">
+                <button type="button" onclick="toggleDropdown('popover-catalog-cat')" class="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-headline font-medium text-slate-700 flex items-center gap-1.5 transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-slate-500">category</span>
+                  <span id="catalog-cat-btn-label">Categories</span>
+                  <span class="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </button>
+                <div id="popover-catalog-cat" class="absolute top-11 left-0 w-56 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-30 space-y-2 hidden">
+                  <span class="text-[11px] font-headline font-bold text-slate-800 block">Filter Categories</span>
+                  <div class="space-y-1.5 text-[12px]">
+                    <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50">
+                      <input type="checkbox" id="cat-filter-xerox" value="Xerox Services" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span>Xerox Services</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50">
+                      <input type="checkbox" id="cat-filter-product" value="Product Sales" checked class="rounded text-indigo-600 focus:ring-0">
+                      <span>Product Sales</span>
+                    </label>
+                  </div>
+                  <div class="flex justify-end pt-2.5 border-t border-slate-100">
+                    <button type="button" onclick="toggleDropdown('popover-catalog-cat')" class="h-7 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-headline font-medium rounded-lg transition-colors">Done</button>
+                  </div>
+                </div>
+              </div>
+
+
+              <button type="button" onclick="applyCatalogFilters()" class="h-9 px-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-[12px] font-headline font-semibold flex items-center gap-1.5 shadow-sm hover:shadow active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[16px]">filter_alt</span>
+                <span>Apply Filter</span>
+              </button>
+
+              <!-- Action: Reset Filters -->
+              <button type="button" onclick="resetCatalogFilters()" title="Reset Filters" class="h-9 px-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-[12px] font-headline font-medium flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>Reset</span>
+              </button>
+            </div>
+            <span class="text-[11px] text-slate-500 font-body">Click Apply to update catalog view.</span>
+          </div>
+
+          <!-- Product Catalog Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-headline font-bold uppercase tracking-wider text-slate-500">
+                  <th class="py-3 px-4">Product ID</th>
+                  <th class="py-3 px-4 cursor-pointer hover:text-indigo-600 transition-colors select-none" onclick="toggleCatalogNameSort()" title="Click to toggle Name sorting">
+                    <div class="inline-flex items-center gap-1">
+                      <span>Product Name</span>
+                      <span id="col-sort-cat-name" class="material-symbols-outlined text-[15px] text-slate-300">unfold_more</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4">Category</th>
+                  <th class="py-3 px-4 text-right cursor-pointer hover:text-indigo-600 transition-colors select-none" onclick="toggleCatalogPriceSort()" title="Click to toggle Price sorting (Lowest / Highest)">
+                    <div class="inline-flex items-center justify-end gap-1 w-full">
+                      <span>Price (₹)</span>
+                      <span id="col-sort-cat-price" class="material-symbols-outlined text-[15px] text-slate-300">unfold_more</span>
+                    </div>
+                  </th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="catalog-table-body" class="divide-y divide-slate-100 font-body">
+                <!-- Dynamically loaded from /api/products -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section B: Shop Branding & Bill Defaults -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-indigo-700 text-[20px]">store</span>
+              <h3 class="text-[15px] font-headline font-bold text-slate-900">Shop Information &amp; Bill Configuration</h3>
+            </div>
+            <span class="text-[11px] text-slate-500 font-body">These details appear at the top of customer print receipts.</span>
+          </div>
+
+          <form onsubmit="handleSettingsPageSubmit(event)" class="p-6 space-y-4">
+            <!-- Official Brand Identity Card (Uploaded Design) -->
+            <div class="bg-gradient-to-r from-emerald-50/70 via-slate-50 to-indigo-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="p-2.5 bg-white rounded-xl border border-emerald-200/80 shadow-xs flex items-center justify-center">
+                  <img src="{{ url_for('static', filename='img/sri_sakthi_logo.png') }}" alt="Sri Sakthi Xerox" class="h-20 w-auto max-w-[260px] object-contain" />
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[13px] font-headline font-bold text-slate-900">Official Brand Identity</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">verified</span> Active Brand Design
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 mt-0.5">This custom name design is applied automatically across your website, receipt previews, and all printed bills.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <a href="{{ url_for('static', filename='img/sri_sakthi_logo.png') }}" target="_blank" class="px-3 py-1.5 text-[11px] font-headline font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-all flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">visibility</span>
+                  <span>View Full Logo</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-[11px] font-headline font-semibold text-slate-700 block mb-1">Shop Name</label>
+                <input type="text" id="page-set-shop-name" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+              </div>
+              <div>
+                <label class="text-[11px] font-headline font-semibold text-slate-700 block mb-1">Tagline</label>
+                <input type="text" id="page-set-shop-tagline" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-headline font-semibold text-slate-700 block mb-1">Shop Address</label>
+              <input type="text" id="page-set-shop-addr" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="text-[11px] font-headline font-semibold text-slate-700 block mb-1">Contact Phone</label>
+                <input type="text" id="page-set-shop-phone" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+              </div>
+              <div>
+                <label class="text-[11px] font-headline font-semibold text-slate-700 block mb-1">Bill Prefix (e.g. BL)</label>
+                <input type="text" id="page-set-bill-prefix" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+              </div>
+              <div>
+                <label class="text-[11px] font-headline font-semibold text-slate-700 block mb-1">GST / Tax Number</label>
+                <input type="text" id="page-set-gst-number" placeholder="Optional" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end pt-3 border-t border-slate-200">
+              <button type="submit" class="px-5 py-2.5 bg-indigo-700 text-white text-[13px] font-headline font-semibold rounded-xl hover:bg-indigo-800 shadow-sm flex items-center gap-1.5 active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[18px]">check</span>
+                <span>Save Shop Settings</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </section>
+
+      <!-- =================================================================
+           PAGE 5: RECYCLE BIN
+           ================================================================= -->
+      <section id="page-recycle" class="hidden space-y-6">
+
+        <!-- Top Category Cards & Tab Switcher -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Income Billing Category Tab Card -->
+          <div id="recycle-tab-income" onclick="switchRecycleCategory('income')" class="cursor-pointer bg-white p-5 rounded-2xl border-2 border-indigo-600 shadow-sm transition-all hover:shadow-md flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[26px]">receipt_long</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-[15px] font-headline font-bold text-slate-900">Income Billing</h3>
+                  <span id="recycle-income-active-dot" class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                </div>
+                <p class="text-[12px] text-slate-500 font-body">Deleted invoices &amp; counter receipts</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="recycle-count-income" class="text-[26px] font-headline font-black text-indigo-700">0</span>
+              <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Deleted Records</p>
+            </div>
+          </div>
+
+          <!-- Spending Details Category Tab Card -->
+          <div id="recycle-tab-spending" onclick="switchRecycleCategory('expense')" class="cursor-pointer bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm transition-all hover:border-slate-300 hover:shadow-md flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[26px]">account_balance_wallet</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-[15px] font-headline font-bold text-slate-900">Spending Details</h3>
+                  <span id="recycle-spending-active-dot" class="hidden w-2 h-2 rounded-full bg-rose-600"></span>
+                </div>
+                <p class="text-[12px] text-slate-500 font-body">Deleted shop &amp; operating expenses</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span id="recycle-count-spending" class="text-[26px] font-headline font-black text-rose-600">0</span>
+              <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Deleted Records</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div class="flex-1 w-full md:max-w-md relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+            <input type="text" id="recycle-search-input" onkeyup="handleRecycleSearchKeyup(event)" placeholder="Search by Deletion ID, Tx/Exp #, customer, payee..." class="w-full pl-9 pr-4 py-2 text-[12px] border border-slate-200 rounded-xl focus:border-indigo-600 focus:outline-none font-body">
+          </div>
+
+          <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+            <button onclick="applyRecycleSearch()" class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-headline text-[12px] font-semibold transition-all">
+              Search
+            </button>
+            <button onclick="resetRecycleSearch()" class="px-3.5 py-2 text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-xl font-headline text-[12px] font-semibold transition-all">
+              Reset
+            </button>
+            <button onclick="confirmEmptyRecycleBin()" class="px-3.5 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl font-headline text-[12px] font-semibold flex items-center gap-1.5 transition-all">
+              <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+              <span>Empty <span id="recycle-empty-label">Income Billing</span></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Deleted Records Table Card -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center gap-2">
+              <span id="recycle-category-badge" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-100 text-indigo-800">
+                Income Billing Trash
+              </span>
+              <span id="recycle-table-count-label" class="text-[12px] text-slate-500 font-body">Showing 0 deleted records</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
+              <span class="material-symbols-outlined text-emerald-600 text-[16px]">verified_user</span>
+              <span>Complete Original Data Preserved</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-[12px]">
+              <thead class="bg-slate-50 text-[10px] uppercase font-headline font-bold text-slate-500 border-b border-slate-100 tracking-wider">
+                <tr id="recycle-table-head-row">
+                  <!-- Populated dynamically based on active category -->
+                </tr>
+              </thead>
+              <tbody id="recycle-table-body" class="divide-y divide-slate-100 font-body">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty State Container -->
+          <div id="recycle-empty-state" class="hidden p-12 text-center space-y-3">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[32px]">delete_sweep</span>
+            </div>
+            <h4 class="text-[15px] font-headline font-bold text-slate-700">Recycle Bin is Empty</h4>
+            <p class="text-[12px] text-slate-400 max-w-sm mx-auto font-body">No deleted records in this category. Any records deleted from the application will be safely stored and preserved here.</p>
+          </div>
+
+          <!-- Pagination -->
+          <div id="recycle-pagination" class="p-4 border-t border-slate-100 flex items-center justify-between text-[12px] bg-slate-50/30">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =================================================================
+       MODALS
+       ================================================================= -->
+
+  <!-- SHARED REUSABLE INCOME FORM MODAL (ADD & EDIT) -->
+  <div id="modal-income-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2.5">
+          <span id="income-modal-icon" class="material-symbols-outlined text-indigo-700 text-[24px]">add_circle</span>
+          <div>
+            <h3 id="income-modal-title" class="text-[17px] font-headline font-bold text-slate-900">New Income Entry</h3>
+            <span id="income-modal-tx-badge" class="hidden text-[11px] font-mono text-indigo-600 font-semibold"></span>
+          </div>
+        </div>
+        <button type="button" onclick="closeIncomeModal()" class="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-lg hover:bg-slate-200/50">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <form id="income-shared-form" onsubmit="handleIncomeFormSubmit(event)" class="p-6 space-y-4">
+        <input type="hidden" id="inc-form-id">
+
+        <!-- Row 1: Date & Income Type -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Date &amp; Time</label>
+            <input type="datetime-local" id="inc-form-date" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Income Type</label>
+            <select id="inc-form-type" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" required>
+              <option value="Xerox Services">Xerox Services</option>
+              <option value="Product Sales">Product Sales</option>
+              <option value="Combo Services">Combo Services</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Description -->
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Description (Optional)</label>
+          <input type="text" id="inc-form-desc" placeholder="Service / Item description (e.g. 50 A4 Xerox B&W)" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+        </div>
+
+        <!-- Row 3: Amount & Discount -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Amount / Rate (₹)</label>
+            <input type="number" id="inc-form-rate" value="10" min="0" step="0.5" oninput="calcIncomeFormTotal()" class="w-full h-9 px-3 text-[12px] font-headline font-bold text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Discount (₹)</label>
+            <input type="number" id="inc-form-disc" value="0" min="0" step="0.5" oninput="calcIncomeFormTotal()" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+          </div>
+        </div>
+
+        <!-- Row 4: Payment Method & Payment Status -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Payment Method</label>
+            <select id="inc-form-pay" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI / GPay / PhonePe</option>
+              <option value="Card">Debit / Credit Card</option>
+              <option value="Other">Credit / Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Payment Status</label>
+            <select id="inc-form-status" class="w-full h-9 px-3 text-[12px] font-headline font-semibold border border-slate-200 rounded-xl bg-white text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
+              <option value="Paid" selected class="text-emerald-700 font-semibold">Paid</option>
+              <option value="Not Paid" class="text-amber-700 font-semibold">Not Paid</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 5: Notes -->
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Notes (Optional)</label>
+          <textarea id="inc-form-notes" rows="2" placeholder="Additional notes or remarks..." class="w-full p-2.5 text-[12px] border border-slate-200 rounded-xl resize-none focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"></textarea>
+        </div>
+
+        <!-- Row 6: Calculated Total Display -->
+        <div class="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
+          <div>
+            <span class="text-[10px] font-headline uppercase text-slate-500 font-bold tracking-wider">Total Net Amount</span>
+            <div class="text-[20px] font-headline font-extrabold text-indigo-700" id="inc-form-total-display">₹10.00</div>
+          </div>
+        </div>
+
+        <!-- Row 7: Actions -->
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button type="button" onclick="closeIncomeModal()" class="px-4 py-2 text-[12px] font-headline font-medium text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors">Cancel</button>
+          <button type="submit" id="inc-form-submit-btn" class="px-5 py-2 bg-indigo-700 text-white text-[12px] font-headline font-semibold rounded-xl hover:bg-indigo-800 shadow-sm flex items-center gap-1.5 active:scale-[0.98] transition-all">
+            <span class="material-symbols-outlined text-[17px]">save</span>
+            <span id="inc-form-submit-label">Save Income</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: CREATE CUSTOMER BILL / INVOICE GENERATOR -->
+  <div id="modal-create-bill" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-indigo-700 text-[22px]">receipt_long</span>
+          <div>
+            <h3 class="text-[17px] font-headline font-bold text-slate-900 leading-tight">Create Customer Invoice</h3>
+            <span class="text-[11px] font-mono text-indigo-700 font-semibold" id="bill-auto-num">Bill #BL-2024-1083 (Auto-Generated)</span>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-create-bill')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
+        <!-- Left: Bill Form (7 cols) -->
+        <div class="md:col-span-7 space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Customer Name</label>
+              <input type="text" id="bill-cust-name" placeholder="e.g. Walk-in Customer" oninput="updateBillPreview()" class="w-full h-8 px-2.5 text-[12px] border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Customer Phone</label>
+              <input type="tel" id="bill-cust-phone" placeholder="e.g. +91 98765 43210" oninput="updateBillPreview()" class="w-full h-8 px-2.5 text-[12px] border border-slate-200 rounded-lg">
+            </div>
+          </div>
+
+          <!-- Add Service / Item Section -->
+          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-headline font-bold text-slate-800 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px] text-indigo-700">post_add</span>
+                Add Service / Item
+              </span>
+              <span id="item-sync-status" class="text-[11px] font-mono text-slate-400">
+                Select from dropdown or enter Product ID
+              </span>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2.5 items-end">
+              <!-- 1. Product Name (Selectable Dropdown) -->
+              <div class="col-span-12 sm:col-span-5">
+                <label class="text-[10px] font-headline font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                  Product Name (Dropdown)
+                </label>
+                <select id="item-product-select" onchange="onProductNameSelect(this.value)" class="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white font-body focus:border-indigo-600 focus:outline-none truncate">
+                  <option value="">-- Select Product / Service --</option>
+                  <!-- Populated from catalog -->
+                </select>
+              </div>
+
+              <!-- 2. Product ID (Manual Input / Auto-Sync) -->
+              <div class="col-span-6 sm:col-span-3">
+                <label class="text-[10px] font-headline font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                  Product ID (Manual)
+                </label>
+                <input type="text" id="item-product-id" placeholder="e.g. PRD-101" oninput="onProductIdInput(this.value)" class="w-full h-8 px-2 text-[11px] font-mono border border-slate-200 rounded-lg bg-white focus:border-indigo-600 focus:outline-none uppercase">
+              </div>
+
+              <!-- 3. Quantity -->
+              <div class="col-span-6 sm:col-span-2">
+                <label class="text-[10px] font-headline font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                  Quantity
+                </label>
+                <input type="number" id="item-qty" value="1" min="1" oninput="calculateItemAmount()" class="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white focus:border-indigo-600 focus:outline-none text-center font-bold">
+              </div>
+
+              <!-- 4. Rate (₹) -->
+              <div class="col-span-6 sm:col-span-2">
+                <label class="text-[10px] font-headline font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                  Rate (₹)
+                </label>
+                <input type="number" id="item-rate" step="0.25" min="0" value="0.00" oninput="calculateItemAmount()" class="w-full h-8 px-2 text-[11px] font-mono border border-slate-200 rounded-lg bg-white focus:border-indigo-600 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 border-t border-slate-200/60">
+              <!-- 5. Automatically Calculated Amount -->
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-headline font-semibold text-slate-600">Calculated Amount:</span>
+                <span id="item-amount-display" class="text-[14px] font-headline font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-lg">₹0.00</span>
+              </div>
+
+              <!-- Add / Update Item Button -->
+              <div class="flex items-center gap-2">
+                <button type="button" id="item-cancel-edit-btn" onclick="cancelEditBillItem()" class="hidden h-8 px-3 text-slate-500 hover:text-slate-800 text-[11px] font-headline font-semibold rounded-lg border border-slate-200 bg-white">
+                  Cancel Edit
+                </button>
+                <button type="button" id="item-add-btn" onclick="addBillItem()" class="h-8 px-4 bg-indigo-700 hover:bg-indigo-800 text-white text-[11px] font-headline font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98]">
+                  <span id="item-add-btn-icon" class="material-symbols-outlined text-[15px]">add</span>
+                  <span id="item-add-btn-text">Add to Bill</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Item Table -->
+          <div class="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+            <table class="w-full text-left text-[12px]">
+              <thead class="bg-slate-50 text-[10px] uppercase font-headline font-bold text-slate-500 sticky top-0">
+                <tr>
+                  <th class="p-2">Product ID</th>
+                  <th class="p-2">Product Name</th>
+                  <th class="p-2 text-center">Qty</th>
+                  <th class="p-2 text-right">Rate</th>
+                  <th class="p-2 text-right">Amount</th>
+                  <th class="p-2 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bill-items-list" class="divide-y divide-slate-100 font-body">
+                <!-- Line items rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Calculations & Payment Method -->
+          <div class="grid grid-cols-3 gap-3 pt-2 text-[12px]">
+            <div>
+              <label class="text-[10px] text-slate-500 font-medium block">Discount (₹)</label>
+              <input type="number" id="bill-discount" value="0" min="0" oninput="calculateBillTotals()" class="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-500 font-medium block">Extra Charges / GST (₹)</label>
+              <input type="number" id="bill-extra" value="0" min="0" oninput="calculateBillTotals()" class="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-500 font-medium block">Payment Method</label>
+              <select id="bill-payment-method" onchange="updateBillPreview()" class="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white">
+                <option value="UPI">UPI / GPay</option>
+                <option value="Cash">Cash</option>
+                <option value="Card">Card</option>
+                <option value="Other">Credit / Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Bill Receipt Preview (5 cols) -->
+        <div class="md:col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between font-mono text-[11px] text-slate-800">
+          <div class="space-y-2">
+            <div class="text-center border-b border-dashed border-slate-300 pb-2">
+              <div class="flex justify-center items-center py-1.5">
+                <img id="preview-shop-logo" src="{{ url_for('static', filename='img/sri_sakthi_logo.png') }}" alt="Sri Sakthi Xerox" class="h-20 max-w-[90%] object-contain mb-1.5 drop-shadow-2xs" />
+              </div>
+              <p class="font-bold text-[13px] font-headline text-slate-900 hidden" id="preview-shop-name">Sri Sakthi Xerox</p>
+              <p class="text-[10px] text-slate-500 leading-tight mt-1" id="preview-shop-address">Sri Mariamman Building, Thuraiyur Main Road, Namakkal</p>
+              <p class="text-[10px] text-slate-500" id="preview-shop-phone">Ph: +91 7010146966</p>
+              <p class="mt-1 font-bold text-indigo-700" id="preview-bill-id">INVOICE: BL-2026-1092</p>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span id="preview-bill-date">Date: Today</span>
+              <span id="preview-cust-phone">—</span>
+            </div>
+            <div class="text-[10px] font-medium border-b border-slate-200 pb-1 flex justify-between items-center">
+              <div>Customer: <span id="preview-cust-name" class="font-bold text-slate-900">Walk-in Customer</span></div>
+              <span id="preview-items-count-badge" class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-100 text-[9px]">0 items</span>
+            </div>
+
+            <!-- Items list preview -->
+            <div id="preview-items-box" class="space-y-1 py-1 max-h-32 overflow-y-auto">
+              <!-- Live items preview -->
+            </div>
+
+            <!-- Total Quantity / Units Count Bar -->
+            <div class="flex justify-between items-center text-[10px] text-slate-600 bg-slate-100/80 px-2 py-1 rounded border border-slate-200/60">
+              <span class="font-medium">Total Quantity:</span>
+              <span class="font-bold text-slate-900" id="preview-total-units">0 items (0 units)</span>
+            </div>
+
+            <div class="border-t border-dashed border-slate-300 pt-2 space-y-1">
+              <div class="flex justify-between text-slate-500"><span>Subtotal:</span><span id="preview-subtotal">₹0.00</span></div>
+              <div class="flex justify-between text-slate-500"><span>Discount:</span><span id="preview-disc">-₹0.00</span></div>
+              <div class="flex justify-between text-slate-500"><span>Extra / GST:</span><span id="preview-extra">+₹0.00</span></div>
+              <div class="flex justify-between text-[13px] font-bold text-slate-900 border-t border-slate-300 pt-1">
+                <span>Grand Total:</span><span id="preview-grand" class="text-emerald-600">₹0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200 space-y-2 font-body">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="font-semibold text-slate-700">Payment Status</span>
+              <span id="preview-pay-badge" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">PAID (UPI)</span>
+            </div>
+            
+            <!-- Single Action Button: Generate Bill (Directly generates bill and opens print screen) -->
+            <div>
+              <button type="button" id="btn-generate-bill-action" onclick="generateAndSaveBill(true)" class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-headline text-[13px] font-semibold flex items-center justify-center gap-2 shadow-sm hover:shadow active:scale-[0.99] transition-all" title="Generate bill and directly open print preview">
+                <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                <span>Generate Bill</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADD SPENDING ENTRY -->
+  <div id="modal-add-spending" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-rose-600 text-[22px]">payments</span>
+          <h3 class="text-[17px] font-headline font-bold text-slate-900">Record Shop Expense</h3>
+        </div>
+        <button onclick="closeModal('modal-add-spending')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <form onsubmit="handleSpendingSubmit(event)" class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Expense Date &amp; Time</label>
+            <input type="datetime-local" id="exp-date" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Expense Category</label>
+            <select id="exp-cat" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white" required>
+              <option value="Stationery Items">Stationery Items</option>
+              <option value="Paper">Paper</option>
+              <option value="Photo Sheets">Photo Sheets</option>
+              <option value="Spirals">Spirals</option>
+              <option value="Service Charges">Service Charges</option>
+              <option value="Toner / Ink">Toner / Ink</option>
+              <option value="EB Bill">EB Bill</option>
+              <option value="Shop Rent">Shop Rent</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Description (Optional)</label>
+          <input type="text" id="exp-desc" placeholder="e.g. JK Copier Paper A4 (5 boxes)" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Amount (₹)</label>
+            <input type="number" id="exp-amount" min="1" step="0.5" placeholder="₹ Amount" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl font-bold" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Payment Method</label>
+            <select id="exp-pay-method" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white">
+              <option value="UPI">UPI / GPay</option>
+              <option value="Cash">Cash</option>
+              <option value="NetBanking">NetBanking</option>
+              <option value="Bank IMPS">Bank IMPS</option>
+              <option value="Card">Debit / Credit Card</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Vendor / Payee Name (Optional)</label>
+          <input type="text" id="exp-payee" placeholder="e.g. Sri Balaji Paper Mart" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-add-spending')" class="px-4 py-2 text-[12px] font-headline font-medium text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-rose-600 text-white text-[12px] font-headline font-semibold rounded-xl hover:bg-rose-700 shadow-sm">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: SETTINGS & RATES -->
+  <div id="modal-settings" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-indigo-700 text-[22px]">settings</span>
+          <h3 class="text-[17px] font-headline font-bold text-slate-900">Shop Settings &amp; Default Rates</h3>
+        </div>
+        <button onclick="closeModal('modal-settings')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <form onsubmit="handleSettingsSubmit(event)" class="p-6 space-y-4">
+        <!-- Brand Identity Banner -->
+        <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 flex items-center gap-3.5">
+          <div class="p-1.5 bg-white rounded-lg border border-emerald-200 shadow-2xs">
+            <img src="{{ url_for('static', filename='img/sri_sakthi_logo.png') }}" alt="Sri Sakthi Xerox" class="h-16 w-auto max-w-[200px] object-contain" />
+          </div>
+          <div class="text-[11px] text-slate-700">
+            <span class="font-bold text-slate-900">Sri Sakthi Xerox</span> brand identity is active and rendered across your application and bills.
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Shop Name</label>
+            <input type="text" id="set-shop-name" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Tagline</label>
+            <input type="text" id="set-shop-tagline" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Shop Address</label>
+          <input type="text" id="set-shop-addr" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Contact Phone</label>
+            <input type="text" id="set-shop-phone" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Bill Prefix</label>
+            <input type="text" id="set-bill-prefix" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">GST / Tax Number</label>
+            <input type="text" id="set-gst-number" placeholder="Optional" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-settings')" class="px-4 py-2 text-[12px] font-headline font-medium text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-700 text-white text-[12px] font-headline font-semibold rounded-xl hover:bg-indigo-800 shadow-sm">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: PRINTABLE RECEIPT / INVOICE PREVIEW -->
+  <div id="modal-print-bill" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 no-print">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-indigo-700 text-[22px]">receipt_long</span>
+          <h3 class="text-[16px] font-headline font-bold text-slate-900">Bill Preview</h3>
+        </div>
+        <button onclick="closeModal('modal-print-bill')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <!-- Printable area -->
+      <div id="printable-receipt-modal" class="p-6 bg-slate-50 font-mono text-[12px] overflow-y-auto max-h-[75vh]">
+        <div id="printable-receipt-content">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="p-4 bg-white border-t border-slate-200 flex items-center justify-between no-print">
+        <button onclick="closeModal('modal-print-bill')" class="px-5 py-2 text-[12px] font-headline font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all">Cancel</button>
+        <button onclick="executePrintReceipt()" class="px-5 py-2 bg-indigo-700 text-white font-headline text-[13px] font-semibold rounded-xl hover:bg-indigo-800 flex items-center gap-1.5 shadow-sm active:scale-[0.98] transition-all">
+          <span class="material-symbols-outlined text-[18px]">print</span>
+          <span>Print</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- MODAL 7: EDIT EXPENSE RECORD -->
+  <div id="modal-edit-expense" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-rose-600 text-[22px]">edit_note</span>
+          <div>
+            <h3 class="text-[17px] font-headline font-bold text-slate-900">Edit Shop Expense</h3>
+            <span id="edit-exp-badge" class="text-[11px] font-mono text-rose-600 font-semibold"></span>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-edit-expense')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <form onsubmit="handleEditExpenseSubmit(event)" class="p-6 space-y-4">
+        <input type="hidden" id="edit-exp-id">
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Expense Date &amp; Time</label>
+            <input type="datetime-local" id="edit-exp-date" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Expense Category</label>
+            <select id="edit-exp-cat" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white" required>
+              <option value="Stationery Items">Stationery Items</option>
+              <option value="Paper">Paper</option>
+              <option value="Photo Sheets">Photo Sheets</option>
+              <option value="Spirals">Spirals</option>
+              <option value="Service Charges">Service Charges</option>
+              <option value="Toner / Ink">Toner / Ink</option>
+              <option value="EB Bill">EB Bill</option>
+              <option value="Shop Rent">Shop Rent</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Description (Optional)</label>
+          <input type="text" id="edit-exp-desc" placeholder="e.g. JK Copier Paper A4 (5 boxes)" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Amount (₹)</label>
+            <input type="number" id="edit-exp-amount" min="1" step="0.5" placeholder="₹ Amount" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl font-bold" required>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Payment Method</label>
+            <select id="edit-exp-pay-method" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white">
+              <option value="UPI">UPI / GPay</option>
+              <option value="Cash">Cash</option>
+              <option value="NetBanking">NetBanking</option>
+              <option value="Bank IMPS">Bank IMPS</option>
+              <option value="Card">Debit / Credit Card</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Vendor / Payee Name (Optional)</label>
+          <input type="text" id="edit-exp-payee" placeholder="e.g. Sri Balaji Paper Mart" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-edit-expense')" class="px-4 py-2 text-[12px] font-headline font-medium text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-rose-600 text-white text-[12px] font-headline font-semibold rounded-xl hover:bg-rose-700 shadow-sm flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">save</span>
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 8: EDIT PRODUCT / SERVICE -->
+  <div id="modal-edit-product" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-indigo-700 text-[22px]">inventory_2</span>
+          <h3 class="text-[17px] font-headline font-bold text-slate-900">Edit Product / Service</h3>
+        </div>
+        <button onclick="closeModal('modal-edit-product')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <form onsubmit="handleEditProductSubmit(event)" class="p-6 space-y-4">
+        <input type="hidden" id="edit-prod-id">
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Product ID (Unique Code)</label>
+          <input type="text" id="edit-prod-code" class="w-full h-9 px-3 text-[12px] font-mono uppercase font-bold text-indigo-700 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600" required>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Product / Service Name</label>
+          <input type="text" id="edit-prod-name" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600" required>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Category</label>
+            <select id="edit-prod-category" class="w-full h-9 px-3 text-[12px] border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-indigo-600">
+              <option value="Xerox Services">Xerox Services</option>
+              <option value="Product Sales">Product Sales</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] font-headline font-semibold text-slate-600 block mb-1">Price (₹)</label>
+            <input type="number" id="edit-prod-price" step="0.25" min="0" class="w-full h-9 px-3 text-[12px] font-headline font-bold text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600" required>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button type="button" onclick="closeModal('modal-edit-product')" class="px-4 py-2 text-[12px] font-headline font-medium text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-700 text-white text-[12px] font-headline font-semibold rounded-xl hover:bg-indigo-800 shadow-sm flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">save</span>
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 9: RECYCLE RECORD FULL DATA SNAPSHOT -->
+  <div id="modal-recycle-details" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-amber-600 text-[24px]">restore_from_trash</span>
+          <div>
+            <h3 class="text-[17px] font-headline font-bold text-slate-900 leading-tight">Deleted Record Snapshot</h3>
+            <span class="text-[11px] font-mono text-slate-500" id="recycle-modal-subtitle">Deletion ID &amp; Timestamp Details</span>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-recycle-details')" class="text-slate-400 hover:text-slate-700"><span class="material-symbols-outlined">close</span></button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1 font-body text-[12px]">
+        <!-- Deletion Meta Bar -->
+        <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span class="text-[10px] font-headline uppercase font-bold text-amber-800 tracking-wider block">Deletion ID</span>
+            <span id="recycle-detail-del-id" class="text-[15px] font-mono font-bold text-amber-900">DEL-INC-2026-0001</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-headline uppercase font-bold text-amber-800 tracking-wider block">Deleted At</span>
+            <span id="recycle-detail-deleted-at" class="font-mono font-semibold text-slate-800">2026-10-17 09:35:12</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-headline uppercase font-bold text-amber-800 tracking-wider block">Category Tab</span>
+            <span id="recycle-detail-type" class="px-2 py-0.5 rounded font-bold text-[10px] bg-amber-200/80 text-amber-900 uppercase">Income Billing</span>
+          </div>
+        </div>
+
+        <!-- Original Core Info Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200/80">
+          <div>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Original Identifier</span>
+            <span id="recycle-detail-ident" class="font-mono font-bold text-slate-900 text-[13px]">TX-2026-1082</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Original Date</span>
+            <span id="recycle-detail-date" class="font-medium text-slate-800">2026-10-17 10:14</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Total Amount</span>
+            <span id="recycle-detail-amount" class="font-headline font-extrabold text-indigo-700 text-[15px]">₹240.00</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Customer / Payee</span>
+            <span id="recycle-detail-party" class="font-medium text-slate-800">Ramesh Chandra</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Category</span>
+            <span id="recycle-detail-category" class="font-medium text-slate-800">Xerox Services</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Payment Method</span>
+            <span id="recycle-detail-paymethod" class="font-medium text-slate-800">Cash</span>
+          </div>
+        </div>
+
+        <!-- Description & Notes -->
+        <div class="space-y-1">
+          <span class="text-[11px] font-headline font-bold text-slate-700 block">Description</span>
+          <div id="recycle-detail-desc" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-slate-700 font-mono text-[11px]">
+            Counter Xerox Print Service
+          </div>
+        </div>
+
+        <!-- Bill Line Items Section (if bill details available) -->
+        <div id="recycle-bill-items-container" class="hidden space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-headline font-bold text-slate-700">Preserved Bill Line Items</span>
+            <span id="recycle-bill-number-badge" class="font-mono text-[11px] text-indigo-700 font-bold">BL-2024-1082</span>
+          </div>
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <table class="w-full text-left text-[11px]">
+              <thead class="bg-slate-100/70 font-headline font-bold text-slate-500 uppercase text-[10px]">
+                <tr>
+                  <th class="p-2">Item Name</th>
+                  <th class="p-2 text-center">Qty</th>
+                  <th class="p-2 text-right">Rate</th>
+                  <th class="p-2 text-right">Line Total</th>
+                </tr>
+              </thead>
+              <tbody id="recycle-bill-items-list" class="divide-y divide-slate-100 font-mono">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="recycle-notes-container" class="hidden space-y-1">
+          <span class="text-[11px] font-headline font-bold text-slate-700 block">Notes</span>
+          <div id="recycle-detail-notes" class="p-2.5 bg-slate-50 rounded-xl border border-slate-200/60 text-slate-600 text-[11px]"></div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
+        <button onclick="closeModal('modal-recycle-details')" class="px-4 py-2 text-[12px] font-headline font-medium text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all">Close</button>
+        <div class="flex items-center gap-2">
+          <button id="recycle-modal-delete-btn" class="px-4 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 text-[12px] font-headline font-semibold rounded-xl flex items-center gap-1.5 transition-all">
+            <span class="material-symbols-outlined text-[16px]">delete_forever</span>
+            <span>Permanent Delete</span>
+          </button>
+          <button id="recycle-modal-restore-btn" class="px-5 py-2 bg-indigo-700 text-white text-[12px] font-headline font-semibold rounded-xl hover:bg-indigo-800 shadow-sm flex items-center gap-1.5 active:scale-[0.98] transition-all">
+            <span class="material-symbols-outlined text-[16px]">restore</span>
+            <span>Restore Record</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Client Application Logic -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
