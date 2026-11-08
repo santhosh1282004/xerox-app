@@ -30,6 +30,7 @@ def get_analysis_data(start_date=None, end_date=None, preset='month', stream_fil
     Computes KPIs, comparative trajectories, stream breakdowns, operational velocities, and activity heatmap.
     """
     now = datetime.datetime.now()
+    today_str = now.strftime('%Y-%m-%d')
     if not start_date or not end_date:
         start_date, end_date = get_date_range_for_preset(preset)
 

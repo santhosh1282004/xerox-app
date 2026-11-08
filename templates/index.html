@@ -1068,18 +1068,24 @@
 
           <!-- Heatmap Visual Grid -->
           <div class="overflow-x-auto custom-scroll pt-2 pb-1">
-            <div class="w-fit min-w-[760px]">
-              <div class="flex gap-2 mb-1.5">
-                <div class="w-5 shrink-0"></div>
-                <div id="analysis-heatmap-months" class="flex gap-[3px] text-[10px] font-mono font-medium text-slate-500">
+            <div class="w-full min-w-[780px]">
+              <div class="flex gap-2 sm:gap-2.5 mb-1.5">
+                <div class="w-5 sm:w-6 shrink-0"></div>
+                <div id="analysis-heatmap-months" class="flex-1 flex gap-1 sm:gap-1.5 text-[10px] font-mono font-medium text-slate-500">
                   <!-- Column-anchored month headers generated dynamically -->
                 </div>
               </div>
-              <div class="flex gap-2">
-                <div class="flex flex-col justify-between text-[9px] font-mono text-slate-400 py-0.5 select-none w-5 text-right shrink-0">
-                  <span>Mon</span><span>Wed</span><span>Fri</span>
+              <div class="flex gap-2 sm:gap-2.5">
+                <div class="flex flex-col gap-1 sm:gap-1.5 text-[9px] font-mono text-slate-400 select-none w-5 sm:w-6 text-right shrink-0">
+                  <div class="flex-1 flex items-center justify-end invisible">Sun</div>
+                  <div class="flex-1 flex items-center justify-end leading-none">Mon</div>
+                  <div class="flex-1 flex items-center justify-end invisible">Tue</div>
+                  <div class="flex-1 flex items-center justify-end leading-none">Wed</div>
+                  <div class="flex-1 flex items-center justify-end invisible">Thu</div>
+                  <div class="flex-1 flex items-center justify-end leading-none">Fri</div>
+                  <div class="flex-1 flex items-center justify-end invisible">Sat</div>
                 </div>
-                <div class="flex gap-[3px]" id="analysis-heatmap-grid">
+                <div class="flex-1 flex gap-1 sm:gap-1.5" id="analysis-heatmap-grid">
                   <!-- 52/53 columns generated dynamically for the selected year -->
                 </div>
               </div>
@@ -1091,11 +1097,11 @@
             <div class="flex items-center gap-1.5">
               <span>Less</span>
               <div class="flex items-center gap-1">
-                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#ebedf0] border border-slate-200"></span>
-                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#9be9a8]"></span>
-                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#40c463]"></span>
-                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#30a14e]"></span>
-                <span class="w-2.5 h-2.5 rounded-[2px] bg-[#216e39]"></span>
+                <span class="w-3 h-3 rounded-[2.5px] bg-[#ebedf0] border border-slate-200"></span>
+                <span class="w-3 h-3 rounded-[2.5px] bg-[#9be9a8]"></span>
+                <span class="w-3 h-3 rounded-[2.5px] bg-[#40c463]"></span>
+                <span class="w-3 h-3 rounded-[2.5px] bg-[#30a14e]"></span>
+                <span class="w-3 h-3 rounded-[2.5px] bg-[#216e39]"></span>
               </div>
               <span>More</span>
             </div>

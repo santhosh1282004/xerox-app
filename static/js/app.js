@@ -2849,12 +2849,39 @@ function formatCalloutCenter(val) {
 }
 
 /**
+ * Helper to compute an evenly spaced, anti-collision vertical text column
+ */
+function getCalloutColumnTargets(count, cy, minY = 50, maxY = 290) {
+  if (count <= 0) return [];
+  if (count === 1) return [cy];
+
+  const availableH = maxY - minY;
+  let idealStep;
+  if (count === 2) idealStep = 76;
+  else if (count === 3) idealStep = 68;
+  else if (count === 4) idealStep = 58;
+  else if (count === 5) idealStep = 48;
+  else idealStep = Math.max(40, availableH / (count - 1));
+
+  const totalSpan = (count - 1) * idealStep;
+  let startY = cy - totalSpan / 2;
+  if (startY < minY) startY = minY;
+  else if (startY + totalSpan > maxY) startY = maxY - totalSpan;
+
+  const targets = [];
+  for (let i = 0; i < count; i++) {
+    targets.push(Math.round(startY + i * idealStep));
+  }
+  return targets;
+}
+
+/**
  * Renders an elegant Callout Donut Chart matching the reference design:
  * - Center dark badge (#0f172a) with bold white total amount and category subtitle
  * - Donut ring with vibrant colored slices
  * - Exploded / popped-out primary slice with soft drop shadow
- * - Angled elbow leader lines connecting slices to bold colored amounts and clean labels
- * - Balanced quadrant distribution preventing crowded lines or collisions
+ * - Standardized angled elbow leader lines connecting slices to bold colored amounts and clean labels
+ * - Evenly spaced, anti-collision left/right-aligned text columns
  */
 function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, emptyLabel) {
   if (!svgEl) return;
@@ -2892,15 +2919,16 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     const pathD = describeDonutArc(cx, cy, rIn, rOut, 0, 2 * Math.PI);
     const amtStr = formatCalloutAmount(it.amount);
     const targetY = cy;
-    const endX = 556;
-    const elbowX = 435;
+    const endX = 560;
+    const elbowX = 425;
     const attachX = cx + rOut;
     const attachY = cy;
     svgEl.innerHTML = defs + `
       <path d="${pathD}" fill="${it.color}" />
       <path d="M ${attachX} ${attachY} L ${elbowX} ${targetY} L ${endX} ${targetY}" stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-      <text x="${endX}" y="${targetY - 6}" text-anchor="end" fill="${it.color}" font-size="15px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
-      <text x="${endX}" y="${targetY + 16}" text-anchor="end" fill="#334155" font-size="12px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(100%)</tspan></text>
+      <circle cx="${attachX}" cy="${attachY}" r="2.5" fill="${it.color}" />
+      <text x="${endX}" y="${targetY - 5}" text-anchor="end" fill="${it.color}" font-size="14.5px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
+      <text x="${endX}" y="${targetY + 15}" text-anchor="end" fill="#334155" font-size="11.5px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(100%)</tspan></text>
       <circle cx="${cx}" cy="${cy}" r="62" fill="#0f172a" stroke="#1e293b" stroke-width="1.5" />
       <text x="${cx}" y="166" text-anchor="middle" fill="#ffffff" font-size="22px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${formatCalloutCenter(totalValue)}</text>
       <text x="${cx}" y="182" text-anchor="middle" fill="#94a3b8" font-size="8.5px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" letter-spacing="0.08em">${centerTitle}</text>
@@ -2908,42 +2936,48 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     return;
   }
 
-  // Partition activeItems into Right and Left to balance visual weight and avoid clustering
-  const rightItems = [];
+  // Balanced Left/Right Hemisphere Partitioning
+  const hero = activeItems[0];
+  const rightItems = [hero];
+  let rSum = hero.amount;
   const leftItems = [];
-  let rSum = 0, lSum = 0;
+  const maxRightCount = Math.ceil(activeItems.length / 2);
 
-  activeItems.forEach((it, idx) => {
-    if (idx === 0) {
-      rightItems.push(it);
-      rSum += it.amount;
-    } else if (rSum <= lSum && rightItems.length < Math.ceil(activeItems.length / 2)) {
-      rightItems.push(it);
-      rSum += it.amount;
-    } else if (leftItems.length < Math.ceil(activeItems.length / 2)) {
-      leftItems.push(it);
-      lSum += it.amount;
-    } else {
-      rightItems.push(it);
-      rSum += it.amount;
+  if (hero.amount < sum * 0.5) {
+    for (let i = 1; i < activeItems.length; i++) {
+      const it = activeItems[i];
+      if (rightItems.length < maxRightCount && (rSum + it.amount) <= sum * 0.52) {
+        rightItems.push(it);
+        rSum += it.amount;
+      } else {
+        leftItems.push(it);
+      }
     }
-  });
+  } else {
+    for (let i = 1; i < activeItems.length; i++) {
+      leftItems.push(activeItems[i]);
+    }
+  }
 
-  // Order Right: sandwich the largest primary item in the center of the right half
-  const maxRight = rightItems[0];
-  const nonMaxRight = rightItems.slice(1).sort((a, b) => a.amount - b.amount);
+  // Right arc order: upper slices, hero in center, lower slices
+  const nonHeroRight = rightItems.slice(1);
   const rightOrdered = [];
-  if (nonMaxRight.length > 0) rightOrdered.push(nonMaxRight[0]);
-  rightOrdered.push(maxRight);
-  for (let i = 1; i < nonMaxRight.length; i++) rightOrdered.push(nonMaxRight[i]);
+  const topHalfCount = Math.floor(nonHeroRight.length / 2);
+  for (let i = 0; i < topHalfCount; i++) {
+    rightOrdered.push(nonHeroRight[i]);
+  }
+  rightOrdered.push(hero);
+  for (let i = topHalfCount; i < nonHeroRight.length; i++) {
+    rightOrdered.push(nonHeroRight[i]);
+  }
 
-  // Order Left: progressing clockwise around the left half (bottom-left to top-left)
+  // Left arc order: clockwise from bottom-left to top-left
   leftItems.sort((a, b) => b.amount - a.amount);
   const leftClockwise = [...leftItems];
 
   const fullClockwise = [...rightOrdered, ...leftClockwise];
 
-  // Start angle centers the right slices around angle 0 (directly to the right)
+  // Right arc centered around angle 0 (3 o'clock)
   const rightAngleSpan = (rSum / sum) * 2 * Math.PI;
   let curAngle = -rightAngleSpan / 2;
 
@@ -2954,9 +2988,9 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     const mid = (start + end) / 2;
     curAngle = end;
 
-    const isLargest = (it === activeItems[0]);
-    const offset = isLargest ? 9 : 0;
-    const rad = isLargest ? rOut + 8 : rOut;
+    const isLargest = (it === hero);
+    const offset = isLargest ? 8 : 0;
+    const rad = isLargest ? rOut + 6 : rOut;
     const dx = Math.cos(mid) * offset;
     const dy = Math.sin(mid) * offset;
 
@@ -2964,15 +2998,12 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     const attachX = (cx + dx) + rad * Math.cos(mid);
     const attachY = (cy + dy) + rad * Math.sin(mid);
 
-    const stubX = attachX + Math.cos(mid) * 12;
-    const stubY = attachY + Math.sin(mid) * 12;
-
     const isRight = rightOrdered.includes(it);
 
-    return { ...it, start, end, mid, isLargest, pathD, attachX, attachY, stubX, stubY, isRight };
+    return { ...it, start, end, mid, isLargest, pathD, attachX, attachY, isRight };
   });
 
-  // Sort slices on each side top-to-bottom for clean parallel leader lines
+  // Sort slices on each side strictly by attachY (top to bottom)
   const rightSlices = slices.filter(s => s.isRight).sort((a, b) => a.attachY - b.attachY);
   const leftSlices = slices.filter(s => !s.isRight).sort((a, b) => a.attachY - b.attachY);
 
@@ -2993,54 +3024,71 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     `;
   });
 
-  // Callout leader lines & labels
+  // Anti-collision evenly spaced vertical column target positions
+  const rightTargets = getCalloutColumnTargets(rightSlices.length, cy);
+  const leftTargets = getCalloutColumnTargets(leftSlices.length, cy);
+
   let calloutsHtml = '';
 
-  // Left callouts
-  const leftCount = leftSlices.length;
-  if (leftCount > 0) {
-    const step = leftCount === 1 ? 0 : Math.min(65, 220 / (leftCount - 1));
-    const startY = leftCount === 1 ? cy : cy - ((leftCount - 1) * step) / 2;
-    leftSlices.forEach((it, i) => {
-      const targetY = startY + i * step;
-      const endX = 24;
-      const elbowX = 145;
-      const amtStr = formatCalloutAmount(it.amount);
-      const pctStr = (Math.round((it.amount / sum) * 1000) / 10).toFixed(1).replace(/\.0$/, '');
-      calloutsHtml += `
-        <g class="cursor-pointer group">
-          <title>${it.name}: ₹${Math.round(it.amount).toLocaleString('en-IN')} (${pctStr}%)</title>
-          <path d="M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${it.stubX.toFixed(1)} ${it.stubY.toFixed(1)} L ${elbowX} ${targetY.toFixed(1)} L ${endX} ${targetY.toFixed(1)}"
-                stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95" />
-          <text x="${endX}" y="${(targetY - 6).toFixed(1)}" text-anchor="start" fill="${it.color}" font-size="15px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
-          <text x="${endX}" y="${(targetY + 16).toFixed(1)}" text-anchor="start" fill="#334155" font-size="12px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(${pctStr}%)</tspan></text>
-        </g>
-      `;
-    });
-  }
+  // Left Callouts: Left-aligned text column with standardized elbow lines
+  const leftEndX = 20;
+  const leftElbowX = 155;
+  leftSlices.forEach((it, i) => {
+    const targetY = leftTargets[i];
+    const amtStr = formatCalloutAmount(it.amount);
+    const pctStr = (Math.round((it.amount / sum) * 1000) / 10).toFixed(1).replace(/\.0$/, '');
 
-  // Right callouts
-  const rightCount = rightSlices.length;
-  if (rightCount > 0) {
-    const step = rightCount === 1 ? 0 : Math.min(65, 220 / (rightCount - 1));
-    const startY = rightCount === 1 ? cy : cy - ((rightCount - 1) * step) / 2;
-    rightSlices.forEach((it, i) => {
-      const targetY = startY + i * step;
-      const endX = 556;
-      const elbowX = 435;
-      const amtStr = formatCalloutAmount(it.amount);
-      const pctStr = (Math.round((it.amount / sum) * 1000) / 10).toFixed(1).replace(/\.0$/, '');
-      calloutsHtml += `
-        <g class="cursor-pointer group">
-          <title>${it.name}: ₹${Math.round(it.amount).toLocaleString('en-IN')} (${pctStr}%)</title>
-          <path d="M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${it.stubX.toFixed(1)} ${it.stubY.toFixed(1)} L ${elbowX} ${targetY.toFixed(1)} L ${endX} ${targetY.toFixed(1)}"
-                stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95" />
-          <text x="${endX}" y="${(targetY - 6).toFixed(1)}" text-anchor="end" fill="${it.color}" font-size="15px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
-          <text x="${endX}" y="${(targetY + 16).toFixed(1)}" text-anchor="end" fill="#334155" font-size="12px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(${pctStr}%)</tspan></text>
-        </g>
-      `;
-    });
-  }
+    const steep = Math.abs(Math.sin(it.mid)) > 0.7;
+    let pathD;
+    if (steep) {
+      const p1X = it.attachX + Math.cos(it.mid) * 10;
+      const p1Y = it.attachY + Math.sin(it.mid) * 10;
+      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${p1X.toFixed(1)} ${p1Y.toFixed(1)} L ${leftElbowX} ${targetY} L ${leftEndX} ${targetY}`;
+    } else {
+      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${leftElbowX} ${targetY} L ${leftEndX} ${targetY}`;
+    }
+
+    calloutsHtml += `
+      <g class="cursor-pointer group">
+        <title>${it.name}: ₹${Math.round(it.amount).toLocaleString('en-IN')} (${pctStr}%)</title>
+        <path d="${pathD}"
+              stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9" />
+        <circle cx="${it.attachX.toFixed(1)}" cy="${it.attachY.toFixed(1)}" r="2.5" fill="${it.color}" />
+        <text x="${leftEndX}" y="${targetY - 5}" text-anchor="start" fill="${it.color}" font-size="14.5px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
+        <text x="${leftEndX}" y="${targetY + 15}" text-anchor="start" fill="#334155" font-size="11.5px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(${pctStr}%)</tspan></text>
+      </g>
+    `;
+  });
+
+  // Right Callouts: Right-aligned text column with standardized elbow lines
+  const rightEndX = 560;
+  const rightElbowX = 425;
+  rightSlices.forEach((it, i) => {
+    const targetY = rightTargets[i];
+    const amtStr = formatCalloutAmount(it.amount);
+    const pctStr = (Math.round((it.amount / sum) * 1000) / 10).toFixed(1).replace(/\.0$/, '');
+
+    const steep = Math.abs(Math.sin(it.mid)) > 0.7;
+    let pathD;
+    if (steep) {
+      const p1X = it.attachX + Math.cos(it.mid) * 10;
+      const p1Y = it.attachY + Math.sin(it.mid) * 10;
+      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${p1X.toFixed(1)} ${p1Y.toFixed(1)} L ${rightElbowX} ${targetY} L ${rightEndX} ${targetY}`;
+    } else {
+      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${rightElbowX} ${targetY} L ${rightEndX} ${targetY}`;
+    }
+
+    calloutsHtml += `
+      <g class="cursor-pointer group">
+        <title>${it.name}: ₹${Math.round(it.amount).toLocaleString('en-IN')} (${pctStr}%)</title>
+        <path d="${pathD}"
+              stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9" />
+        <circle cx="${it.attachX.toFixed(1)}" cy="${it.attachY.toFixed(1)}" r="2.5" fill="${it.color}" />
+        <text x="${rightEndX}" y="${targetY - 5}" text-anchor="end" fill="${it.color}" font-size="14.5px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
+        <text x="${rightEndX}" y="${targetY + 15}" text-anchor="end" fill="#334155" font-size="11.5px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(${pctStr}%)</tspan></text>
+      </g>
+    `;
+  });
 
   // Center Dark Navy Badge
   const centerAmtStr = formatCalloutCenter(totalValue);
@@ -3195,10 +3243,10 @@ function renderHeatmap(heatmapData, targetYear) {
 
   // Build calendar week columns for target year
   for (let w = 0; w < totalWeeks; w++) {
-    // 1. Column for the month label (exact same column width w-[11px] so months align with weeks)
+    // 1. Column for the month label (exact same column width flex-1 so months align with weeks)
     if (monthsContainer) {
       const monthCol = document.createElement('div');
-      monthCol.className = 'w-[11px] h-4 relative shrink-0';
+      monthCol.className = 'flex-1 min-w-[11px] h-5 relative shrink-0';
 
       // Check if a new month starts in this week
       let monthToLabel = -1;
@@ -3217,7 +3265,7 @@ function renderHeatmap(heatmapData, targetYear) {
 
       if (monthToLabel !== -1) {
         const labelSpan = document.createElement('span');
-        labelSpan.className = 'absolute left-0 top-0 text-[10px] font-mono font-medium text-slate-500 pointer-events-none select-none';
+        labelSpan.className = 'absolute left-0 top-0 text-[10px] sm:text-[11px] font-mono font-medium text-slate-500 pointer-events-none select-none whitespace-nowrap';
         labelSpan.textContent = monthShorts[monthToLabel];
         monthCol.appendChild(labelSpan);
       }
@@ -3226,7 +3274,7 @@ function renderHeatmap(heatmapData, targetYear) {
 
     // 2. Column for the activity cells
     const col = document.createElement('div');
-    col.className = 'flex flex-col gap-[3px] shrink-0';
+    col.className = 'flex-1 min-w-[11px] flex flex-col gap-1 sm:gap-1.5 shrink-0';
 
     for (let d = 0; d < 7; d++) {
       const curDate = new Date(startDay);
@@ -3239,7 +3287,7 @@ function renderHeatmap(heatmapData, targetYear) {
       if (y !== yr) {
         // Outside target calendar year: invisible placeholder cell
         const spacer = document.createElement('div');
-        spacer.className = 'w-[11px] h-[11px] opacity-0 pointer-events-none';
+        spacer.className = 'w-full aspect-square opacity-0 pointer-events-none';
         col.appendChild(spacer);
         continue;
       }
@@ -3259,7 +3307,7 @@ function renderHeatmap(heatmapData, targetYear) {
       else if (jobsCount > 0) colorIdx = 1;
 
       const cell = document.createElement('div');
-      cell.className = `w-[11px] h-[11px] rounded-[2px] ${colorIdx === 0 ? 'border border-slate-200/60' : ''} transition-all hover:scale-125 cursor-pointer relative`;
+      cell.className = `w-full aspect-square rounded-[2px] sm:rounded-[3px] ${colorIdx === 0 ? 'border border-slate-200/70' : ''} transition-transform duration-150 hover:scale-125 cursor-pointer relative hover:z-10 shadow-2xs`;
       cell.style.backgroundColor = greenColors[colorIdx];
       cell.title = `${dateStr}: ${jobsCount} ${jobsCount === 1 ? 'activity' : 'activities'} recorded${
         amount > 0 ? ' (₹' + amount.toLocaleString('en-IN') + ')' : ''
