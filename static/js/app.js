@@ -114,7 +114,7 @@ function applyShopSettingsToUI() {
 // =========================================================================
 function showPage(pageId) {
   state.activePage = pageId;
-  const pages = ['income', 'spending', 'analysis', 'settings', 'recycle'];
+  const pages = ['income', 'spending', 'analysis', 'products', 'settings', 'recycle'];
   pages.forEach(p => {
     const pageEl = document.getElementById(`page-${p}`);
     const navEl = document.getElementById(`nav-${p}`);
@@ -169,11 +169,15 @@ function showPage(pageId) {
       </button>
     `;
     loadAnalysisData();
-  } else if (pageId === 'settings') {
-    headerTitle.textContent = 'Products & Settings';
-    headerSubtitle.textContent = 'Manage product catalog, Product IDs, service pricing, and shop configuration.';
+  } else if (pageId === 'products') {
+    headerTitle.textContent = 'Products Catalog';
+    headerSubtitle.textContent = 'Manage product catalog, Product IDs, and service pricing for billing.';
     contextActions.innerHTML = '';
     loadProductsCatalog();
+  } else if (pageId === 'settings') {
+    headerTitle.textContent = 'Shop Settings & Preferences';
+    headerSubtitle.textContent = 'Configure interface theme, font scaling, receipt branding, and billing defaults.';
+    contextActions.innerHTML = '';
     loadSettingsPage();
   } else if (pageId === 'recycle') {
     headerTitle.textContent = 'Recycle Bin';
@@ -2876,11 +2880,46 @@ function getCalloutColumnTargets(count, cy, minY = 50, maxY = 290) {
 }
 
 /**
+ * Generates an SVG path for a soft tangent bezier leader line connecting a slice
+ * outer contact point to a standardized horizontal shelf line under callout text.
+ * - Leaves perpendicularly/radially outward from doughnut surface (outer clearance guaranteed).
+ * - Softly curves into a horizontal tangent at the shelf line (C1 continuous smoothness).
+ * - Zero sharp angles, zero doughnut surface intersections.
+ */
+function buildSoftTangentLeaderPath(attachX, attachY, midAngle, shelfX, targetY, endX, isRight) {
+  const p0x = attachX;
+  const p0y = attachY;
+  const dist = Math.hypot(shelfX - p0x, targetY - p0y);
+
+  // Radial outward projection from slice perimeter
+  let k1 = Math.min(26, Math.max(14, dist * 0.28));
+  if (isRight) {
+    if (p0x + k1 * Math.cos(midAngle) >= shelfX - 4) {
+      k1 = Math.max(8, (shelfX - 4 - p0x) / Math.max(0.1, Math.cos(midAngle)));
+    }
+  } else {
+    if (p0x + k1 * Math.cos(midAngle) <= shelfX + 4) {
+      k1 = Math.max(8, (shelfX + 4 - p0x) / Math.min(-0.1, Math.cos(midAngle)));
+    }
+  }
+
+  const cp1x = p0x + k1 * Math.cos(midAngle);
+  const cp1y = p0y + k1 * Math.sin(midAngle);
+
+  // CP2 flattens horizontally into (shelfX, targetY)
+  const k2 = Math.min(24, Math.max(12, dist * 0.3));
+  const cp2x = isRight ? shelfX - k2 : shelfX + k2;
+  const cp2y = targetY;
+
+  return `M ${p0x.toFixed(1)} ${p0y.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${shelfX} ${targetY} L ${endX} ${targetY}`;
+}
+
+/**
  * Renders an elegant Callout Donut Chart matching the reference design:
  * - Center dark badge (#0f172a) with bold white total amount and category subtitle
  * - Donut ring with vibrant colored slices
  * - Exploded / popped-out primary slice with soft drop shadow
- * - Standardized angled elbow leader lines connecting slices to bold colored amounts and clean labels
+ * - Soft tangent bezier leader lines connecting slices to bold colored amounts and clean labels
  * - Evenly spaced, anti-collision left/right-aligned text columns
  */
 function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, emptyLabel) {
@@ -2920,12 +2959,13 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     const amtStr = formatCalloutAmount(it.amount);
     const targetY = cy;
     const endX = 560;
-    const elbowX = 425;
+    const shelfX = 430;
     const attachX = cx + rOut;
     const attachY = cy;
+    const pathLeader = buildSoftTangentLeaderPath(attachX, attachY, 0, shelfX, targetY, endX, true);
     svgEl.innerHTML = defs + `
       <path d="${pathD}" fill="${it.color}" />
-      <path d="M ${attachX} ${attachY} L ${elbowX} ${targetY} L ${endX} ${targetY}" stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      <path d="${pathLeader}" stroke="${it.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
       <circle cx="${attachX}" cy="${attachY}" r="2.5" fill="${it.color}" />
       <text x="${endX}" y="${targetY - 5}" text-anchor="end" fill="${it.color}" font-size="14.5px" font-weight="800" font-family="'Plus Jakarta Sans', sans-serif">${amtStr}</text>
       <text x="${endX}" y="${targetY + 15}" text-anchor="end" fill="#334155" font-size="11.5px" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif">${it.name} <tspan fill="#64748b" font-weight="500">(100%)</tspan></text>
@@ -3030,23 +3070,14 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
 
   let calloutsHtml = '';
 
-  // Left Callouts: Left-aligned text column with standardized elbow lines
+  // Left Callouts: Left-aligned text column with soft tangent bezier leader lines
   const leftEndX = 20;
-  const leftElbowX = 155;
+  const leftShelfX = 150;
   leftSlices.forEach((it, i) => {
     const targetY = leftTargets[i];
     const amtStr = formatCalloutAmount(it.amount);
     const pctStr = (Math.round((it.amount / sum) * 1000) / 10).toFixed(1).replace(/\.0$/, '');
-
-    const steep = Math.abs(Math.sin(it.mid)) > 0.7;
-    let pathD;
-    if (steep) {
-      const p1X = it.attachX + Math.cos(it.mid) * 10;
-      const p1Y = it.attachY + Math.sin(it.mid) * 10;
-      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${p1X.toFixed(1)} ${p1Y.toFixed(1)} L ${leftElbowX} ${targetY} L ${leftEndX} ${targetY}`;
-    } else {
-      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${leftElbowX} ${targetY} L ${leftEndX} ${targetY}`;
-    }
+    const pathD = buildSoftTangentLeaderPath(it.attachX, it.attachY, it.mid, leftShelfX, targetY, leftEndX, false);
 
     calloutsHtml += `
       <g class="cursor-pointer group">
@@ -3060,23 +3091,14 @@ function renderCalloutDonutSVG(svgEl, items, totalValue, centerTitle, filterId, 
     `;
   });
 
-  // Right Callouts: Right-aligned text column with standardized elbow lines
+  // Right Callouts: Right-aligned text column with soft tangent bezier leader lines
   const rightEndX = 560;
-  const rightElbowX = 425;
+  const rightShelfX = 430;
   rightSlices.forEach((it, i) => {
     const targetY = rightTargets[i];
     const amtStr = formatCalloutAmount(it.amount);
     const pctStr = (Math.round((it.amount / sum) * 1000) / 10).toFixed(1).replace(/\.0$/, '');
-
-    const steep = Math.abs(Math.sin(it.mid)) > 0.7;
-    let pathD;
-    if (steep) {
-      const p1X = it.attachX + Math.cos(it.mid) * 10;
-      const p1Y = it.attachY + Math.sin(it.mid) * 10;
-      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${p1X.toFixed(1)} ${p1Y.toFixed(1)} L ${rightElbowX} ${targetY} L ${rightEndX} ${targetY}`;
-    } else {
-      pathD = `M ${it.attachX.toFixed(1)} ${it.attachY.toFixed(1)} L ${rightElbowX} ${targetY} L ${rightEndX} ${targetY}`;
-    }
+    const pathD = buildSoftTangentLeaderPath(it.attachX, it.attachY, it.mid, rightShelfX, targetY, rightEndX, true);
 
     calloutsHtml += `
       <g class="cursor-pointer group">
@@ -3631,8 +3653,8 @@ async function loadSettingsPage() {
       const phoneEl = document.getElementById('page-set-shop-phone');
       const prefixEl = document.getElementById('page-set-bill-prefix');
       const gstEl = document.getElementById('page-set-gst-number');
-      const xeroxEl = document.getElementById('page-set-xerox-rate');
-      const bindEl = document.getElementById('page-set-binding-rate');
+      const xeroxEl = document.getElementById('page-set-default-xerox-rate') || document.getElementById('page-set-xerox-rate');
+      const bindEl = document.getElementById('page-set-default-binding-rate') || document.getElementById('page-set-binding-rate');
 
       if (nameEl) nameEl.value = s.shop_name || '';
       if (tagEl) tagEl.value = s.tagline || '';
@@ -3640,12 +3662,14 @@ async function loadSettingsPage() {
       if (phoneEl) phoneEl.value = s.phone || '';
       if (prefixEl) prefixEl.value = s.bill_prefix || 'BL';
       if (gstEl) gstEl.value = s.gst_number || '';
-      if (xeroxEl) xeroxEl.value = s.default_xerox_rate || 1.5;
-      if (bindEl) bindEl.value = s.default_binding_rate || 60;
+      if (xeroxEl) xeroxEl.value = s.default_xerox_rate != null ? s.default_xerox_rate : 1.5;
+      if (bindEl) bindEl.value = s.default_binding_rate != null ? s.default_binding_rate : 60;
     }
   } catch (err) {
     console.error("Could not load settings:", err);
   }
+  updateThemeUI();
+  updateFontScaleUI();
 }
 
 async function handleSettingsPageSubmit(e) {
@@ -3659,10 +3683,10 @@ async function handleSettingsPageSubmit(e) {
     gst_number: document.getElementById('page-set-gst-number')?.value.trim() || ''
   };
 
-  const xeroxEl = document.getElementById('page-set-xerox-rate');
-  if (xeroxEl) payload.default_xerox_rate = parseFloat(xeroxEl.value) || 1.5;
-  const bindEl = document.getElementById('page-set-binding-rate');
-  if (bindEl) payload.default_binding_rate = parseFloat(bindEl.value) || 60;
+  const xeroxEl = document.getElementById('page-set-default-xerox-rate') || document.getElementById('page-set-xerox-rate');
+  if (xeroxEl && xeroxEl.value) payload.default_xerox_rate = parseFloat(xeroxEl.value) || 1.5;
+  const bindEl = document.getElementById('page-set-default-binding-rate') || document.getElementById('page-set-binding-rate');
+  if (bindEl && bindEl.value) payload.default_binding_rate = parseFloat(bindEl.value) || 60;
 
   try {
     const res = await fetch('/api/settings', {
@@ -3675,6 +3699,97 @@ async function handleSettingsPageSubmit(e) {
     await loadShopSettings();
   } catch (err) {
     showToast("Error updating shop settings", "error");
+  }
+}
+
+// =========================================================================
+// 7B. THEME & FONT SCALING CONTROLLERS
+// =========================================================================
+function setTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark');
+    if (document.body) document.body.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    if (document.body) document.body.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }
+  updateThemeUI();
+  updateFontScaleUI();
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  setTheme(isDark ? 'light' : 'dark');
+}
+
+function updateThemeUI() {
+  const isDark = document.documentElement.classList.contains('dark');
+  const lightBtn = document.getElementById('theme-btn-light');
+  const darkBtn = document.getElementById('theme-btn-dark');
+  const headerThemeIcon = document.getElementById('header-theme-icon');
+
+  if (lightBtn && darkBtn) {
+    if (isDark) {
+      darkBtn.className = 'flex-1 py-2.5 px-3 rounded-xl border-2 border-indigo-500 bg-indigo-950/60 text-indigo-300 font-headline text-[12px] font-bold flex items-center justify-center gap-2 shadow-xs transition-all';
+      lightBtn.className = 'flex-1 py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-headline text-[12px] font-medium flex items-center justify-center gap-2 hover:bg-slate-700 transition-all';
+    } else {
+      lightBtn.className = 'flex-1 py-2.5 px-3 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-headline text-[12px] font-bold flex items-center justify-center gap-2 shadow-xs transition-all';
+      darkBtn.className = 'flex-1 py-2.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-headline text-[12px] font-medium flex items-center justify-center gap-2 hover:bg-slate-50 transition-all';
+    }
+  }
+
+  if (headerThemeIcon) {
+    headerThemeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+  }
+}
+
+function setFontScale(scale) {
+  const validScales = ['small', 'medium', 'large'];
+  if (!validScales.includes(scale)) scale = 'medium';
+
+  document.documentElement.classList.remove('font-scale-small', 'font-scale-medium', 'font-scale-large');
+  document.documentElement.classList.add('font-scale-' + scale);
+  if (document.body) {
+    document.body.classList.remove('font-scale-small', 'font-scale-medium', 'font-scale-large');
+    document.body.classList.add('font-scale-' + scale);
+  }
+
+  const factor = scale === 'small' ? '0.9' : (scale === 'large' ? '1.12' : '1.0');
+  document.documentElement.style.setProperty('--app-font-scale', factor);
+  document.documentElement.style.setProperty('--font-scale', factor);
+  if (document.body) {
+    document.body.style.setProperty('--app-font-scale', factor);
+    document.body.style.setProperty('--font-scale', factor);
+  }
+
+  localStorage.setItem('font_scale', scale);
+  updateFontScaleUI();
+}
+
+function updateFontScaleUI() {
+  const currentScale = localStorage.getItem('font_scale') || 'medium';
+  const isDark = document.documentElement.classList.contains('dark');
+
+  ['small', 'medium', 'large'].forEach(s => {
+    const btn = document.getElementById(`font-scale-btn-${s}`);
+    if (btn) {
+      if (s === currentScale) {
+        btn.className = isDark
+          ? 'flex-1 py-2 px-3 rounded-xl border-2 border-indigo-500 bg-indigo-950/60 text-indigo-300 font-headline text-[12px] font-bold shadow-xs transition-all'
+          : 'flex-1 py-2 px-3 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-headline text-[12px] font-bold shadow-xs transition-all';
+      } else {
+        btn.className = isDark
+          ? 'flex-1 py-2 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-headline text-[12px] font-medium hover:bg-slate-700 transition-all'
+          : 'flex-1 py-2 px-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-headline text-[12px] font-medium hover:bg-slate-50 transition-all';
+      }
+    }
+  });
+
+  const scaleLabel = document.getElementById('header-font-scale-label');
+  if (scaleLabel) {
+    scaleLabel.textContent = currentScale === 'small' ? '90%' : (currentScale === 'large' ? '110%' : '100%');
   }
 }
 
@@ -3741,6 +3856,8 @@ async function handleSettingsSubmit(e) {
 // 8. INITIALIZATION ON DOM READY
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  updateThemeUI();
+  updateFontScaleUI();
   setupIncomeFilters();
   setupSpendingFilters();
   syncIncomeSortUI();

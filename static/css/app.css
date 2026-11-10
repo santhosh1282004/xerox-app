@@ -6,6 +6,159 @@
   --brand-600: #4f46e5;
   --brand-700: #4338ca;
   --brand-800: #3730a3;
+  --app-font-scale: 1;
+  --font-scale: 1;
+}
+
+/* =========================================================================
+   ROOT FONT SCALING SYSTEM
+   Scales text across ledger headers, metrics, and cards
+   ========================================================================= */
+html.font-scale-small,
+body.font-scale-small {
+  --app-font-scale: 0.9;
+  --font-scale: 0.9;
+  font-size: 14.4px;
+}
+
+html.font-scale-medium,
+body.font-scale-medium {
+  --app-font-scale: 1.0;
+  --font-scale: 1.0;
+  font-size: 16px;
+}
+
+html.font-scale-large,
+body.font-scale-large {
+  --app-font-scale: 1.12;
+  --font-scale: 1.12;
+  font-size: 17.92px;
+}
+
+/* 1. Ledger Table Headers Scaling */
+html.font-scale-small th { font-size: 10px !important; }
+html.font-scale-medium th { font-size: 11px !important; }
+html.font-scale-large th { font-size: 12.5px !important; }
+
+/* 2. Table Data Cells */
+html.font-scale-small td { font-size: 11.5px !important; }
+html.font-scale-medium td { font-size: 13px !important; }
+html.font-scale-large td { font-size: 14.5px !important; }
+
+/* 3. Metric Values Scaling */
+html.font-scale-small [id$="-val"],
+html.font-scale-small [id$="-count"] { font-size: 24px !important; }
+html.font-scale-medium [id$="-val"],
+html.font-scale-medium [id$="-count"] { font-size: 28px !important; }
+html.font-scale-large [id$="-val"],
+html.font-scale-large [id$="-count"] { font-size: 32px !important; }
+
+/* 4. Card Titles & Headings */
+html.font-scale-small h1, html.font-scale-small #header-title { font-size: 19px !important; }
+html.font-scale-large h1, html.font-scale-large #header-title { font-size: 25px !important; }
+html.font-scale-small h2 { font-size: 17px !important; }
+html.font-scale-large h2 { font-size: 22px !important; }
+html.font-scale-small h3 { font-size: 13.5px !important; }
+html.font-scale-large h3 { font-size: 16.5px !important; }
+
+/* 5. Card Body Text, Labels, Inputs */
+html.font-scale-small .font-body,
+html.font-scale-small p,
+html.font-scale-small label,
+html.font-scale-small input,
+html.font-scale-small select {
+  font-size: 11px !important;
+}
+html.font-scale-large .font-body,
+html.font-scale-large p,
+html.font-scale-large label,
+html.font-scale-large input,
+html.font-scale-large select {
+  font-size: 13.5px !important;
+}
+
+/* =========================================================================
+   DARK MODE THEME
+   ========================================================================= */
+html.dark {
+  color-scheme: dark;
+}
+html.dark body {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+html.dark aside {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+}
+html.dark header {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: #1e293b !important;
+}
+html.dark .bg-white {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/50 {
+  background-color: #161f30 !important;
+  border-color: #1f2937 !important;
+}
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/80 {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+html.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+html.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+html.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+html.dark .text-slate-400 {
+  color: #64748b !important;
+}
+html.dark .border-slate-200,
+html.dark .border-slate-100 {
+  border-color: #1f2937 !important;
+}
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1f2937 !important;
+}
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+html.dark .modal-backdrop {
+  background: rgba(0, 0, 0, 0.75) !important;
+}
+html.dark .toast {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+html.dark .custom-scroll::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+html.dark .custom-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
 }
 
 body {
